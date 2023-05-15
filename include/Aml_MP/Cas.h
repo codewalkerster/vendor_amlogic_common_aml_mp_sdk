@@ -33,7 +33,8 @@ typedef struct {
     uint32_t stream_num;                    /**< Elementary streams' number.*/
     uint8_t ca_private_data[MAX_DATA_LEN];  /**< Private data.*/
     uint8_t ca_private_data_len;            /**< Private data's length.*/
-    long reserved[8];
+    uint8_t fend_dev __AML_MP_RESERVE_ALIGNED; /**< The frontend device's index.*/
+    long reserved[7];
 } Aml_MP_CASServiceInfo;
 
 typedef enum {

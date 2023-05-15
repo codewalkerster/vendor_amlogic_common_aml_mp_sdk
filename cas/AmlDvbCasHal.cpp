@@ -62,6 +62,7 @@ static CA_SERVICE_MODE_t convertToCAServiceMode(Aml_MP_CASServiceMode serviceMod
 static void convertToCAServiceInfo(AM_CA_ServiceInfo_t* caServiceInfo, Aml_MP_CASServiceInfo* mpServiceInfo)
 {
     caServiceInfo->service_id = mpServiceInfo->service_id;
+    caServiceInfo->fend_dev = mpServiceInfo->fend_dev;
     caServiceInfo->dmx_dev = mpServiceInfo->dmx_dev;
     caServiceInfo->dsc_dev = mpServiceInfo->dsc_dev;
     caServiceInfo->dvr_dev = mpServiceInfo->dvr_dev;
