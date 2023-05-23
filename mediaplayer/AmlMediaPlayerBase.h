@@ -63,8 +63,8 @@ public:
     int registerEventCallBack(Aml_MP_MediaPlayerEventCallback cb, void* userData);
 
     int setSubtitleWindow(int x, int y, int width, int height);
-    int showSubtitle();
-    int hideSubtitle();
+//    int showSubtitle();
+//    int hideSubtitle();
 
     virtual int setDataSource(const char *uri) = 0;
     virtual int setANativeWindow(ANativeWindow* nativeWindow) = 0;
@@ -85,6 +85,8 @@ public:
     virtual int getVolume(float* volume) = 0;
     virtual int showVideo() = 0;
     virtual int hideVideo() = 0;
+    virtual int showSubtitle() = 0;
+    virtual int hideSubtitle() = 0;
     virtual int invoke(Aml_MP_MediaPlayerInvokeRequest* request, Aml_MP_MediaPlayerInvokeReply* reply) = 0;
     virtual int setAVSyncSource(Aml_MP_MediaPlayerAVSyncSource syncSource) = 0;
     virtual int setParameter(Aml_MP_MediaPlayerParameterKey key, void* parameter) = 0;

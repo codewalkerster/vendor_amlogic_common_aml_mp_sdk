@@ -653,7 +653,7 @@ int AmlTsPlayer::getFirstPts(Aml_MP_StreamType type, int64_t* pts) {
 
 int AmlTsPlayer::getBufferStat(Aml_MP_BufferStat* bufferStat) {
     am_tsplayer_result ret;
-    am_tsplayer_buffer_stat buffer_stat;
+    am_tsplayer_buffer_stat buffer_stat{0, 0, 0};
 
     ret = AmTsPlayer_getBufferStat(mPlayer, TS_STREAM_AUDIO, &buffer_stat);
     if (ret != AM_TSPLAYER_OK) {

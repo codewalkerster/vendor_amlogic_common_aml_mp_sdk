@@ -32,6 +32,7 @@
 namespace aml_mp {
 
 #ifdef HAVE_SUBTITLE
+#define SUBTITLE_SOURCE_CREATE_ID (0)
 wptr<AmlPlayerBase> AmlPlayerBase::sSubtitleCbHandle;
 #endif
 
@@ -96,7 +97,18 @@ AmlPlayerBase::~AmlPlayerBase()
         amlsub_Destroy(mSubtitleHandle);
         mSubtitleHandle = nullptr;
     }
+
+#ifdef __linux__
+#ifndef ANDROID
+    if (mSubSourceHandle != nullptr) {
+        SubSource_Stop(mSubSourceHandle);
+        SubSource_Destroy(mSubSourceHandle);
+        mSubSourceHandle = nullptr;
+    }
 #endif
+#endif
+
+#endif//HAVE_SUBTITLE
 }
 
 int AmlPlayerBase::registerEventCallback(Aml_MP_PlayerEventCallback cb, void* userData)
@@ -132,7 +144,20 @@ int AmlPlayerBase::flush() {
         MLOGE("amlsub_Reset failed! %d", ret);
         return -1;
     }
+
+#ifdef __linux__
+#ifndef ANDROID
+    if (mSubSourceHandle != nullptr) {
+        ret = SubSource_Reset(mSubSourceHandle);
+        if (ret != SUB_STAT_OK) {
+            MLOGE("SubSource_Reset failed! %d", ret);
+            return -1;
+        }
+    }
 #endif
+#endif
+
+#endif//HAVE_SUBTITLE
     return 0;
 }
 
@@ -214,7 +239,10 @@ bool AmlPlayerBase::constructAmlSubtitleParam(AmlSubtitleParam* amlSubParam, Aml
     case AML_MP_SUBTITLE_CODEC_TTML:// TTML Subtitle Support
         amlSubParam->subtitleType = AmlSubtitletype::TYPE_SUBTITLE_TTML;
         break;
-
+    case AML_MP_SUBTITLE_CODEC_ASS:
+    case AML_MP_SUBTITLE_CODEC_SUBRIP:
+        amlSubParam->subtitleType = AmlSubtitletype::TYPE_SUBTITLE_SSA;//Subtitles have reused these formats
+        break;
     default:
         ret = false;
         break;
@@ -227,7 +255,29 @@ bool AmlPlayerBase::constructAmlSubtitleParam(AmlSubtitleParam* amlSubParam, Aml
     amlSubParam->compositionPageId = params->compositionPageId;
     return ret;
 }
+
+#ifdef __linux__
+#ifndef ANDROID
+CodecID AmlPlayerBase::mpSubtitleCodec2CodecID(Aml_MP_CodecID codecId)
+{
+    switch (codecId) {
+        case AML_MP_SUBTITLE_CODEC_CC: return CodecID::CODEC_ID_EIA_608;
+        case AML_MP_SUBTITLE_CODEC_SCTE27: return CodecID::CODEC_ID_DVB_SUBTITLE;//no suitable value
+        case AML_MP_SUBTITLE_CODEC_DVB: return CodecID::CODEC_ID_DVB_SUBTITLE;
+        case AML_MP_SUBTITLE_CODEC_TELETEXT: return CodecID::CODEC_ID_DVB_TELETEXT;
+        case AML_MP_SUBTITLE_CODEC_ASS: return CodecID::CODEC_ID_SSA;
+        case AML_MP_SUBTITLE_CODEC_SUBRIP: return CodecID::CODEC_ID_SSA;
+        // todo, wait for subtitle confirm subtitle type name
+        case AML_MP_SUBTITLE_CODEC_TTML: return CodecID::CODEC_ID_SMPTE_TTML_SUBTITLE;
+        default:
+            MLOGI("unknown Aml_MP_CodecID, use default CodecID");
+            return CodecID::CODEC_ID_DVB_SUBTITLE;
+    }
+}
 #endif
+#endif
+
+#endif//HAVE_SUBTITLE
 
 int AmlPlayerBase::startSubtitleDecoding()
 {
@@ -251,10 +301,34 @@ int AmlPlayerBase::startSubtitleDecoding()
         return -1;
     }
 
+#ifdef __linux__
+#ifndef ANDROID
+    //send es subtitle through SubSource_SendData
+    if (mCreateParams->sourceType == AML_MP_INPUT_SOURCE_ES_MEMORY && mSubSourceHandle == nullptr) {
+        int sessionId = -1;
+
+        amlsub_GetSessionId(mSubtitleHandle, &sessionId);
+
+        subParam.ioSource = AmlSubtitleIOType::E_SUBTITLE_SOCK;
+        MLOGI("es mode, create mSubSourceHandle:%d, sessionId=%d, ioSource:%d, mCreateParams.options:0x%" PRIx64 "", (AML_MP_INPUT_SOURCE_ES_MEMORY), sessionId, subParam.ioSource, mCreateParams->options);
+        mSubSourceHandle = SubSource_Create(sessionId < 0 ? SUBTITLE_SOURCE_CREATE_ID : sessionId);
+        if (mSubSourceHandle == nullptr) {
+            MLOGE("mSubSourceHandle is NULL");
+            return -1;
+        }
+
+    }
+#endif
+#endif
 
     sSubtitleCbHandle = this;
 #ifdef ANDROID
     amlsub_RegistOnDataCB(mSubtitleHandle, AmlMPSubtitleDataCb);
+#else
+    if (mCreateParams->options & AML_MP_OPTION_REPORT_SUBTITLE_DATA) {
+        amlsub_RegistOnDataCB(mSubtitleHandle, AmlMPSubtitleDataCb);
+    }
+
 #endif
     amlsub_RegistOnSubtitleAvailCb(mSubtitleHandle, AmlMPSubtitleAvailCb);
     amlsub_RegistGetDimensionCb(mSubtitleHandle, AmlMPSubtitleDimensionCb);
@@ -273,6 +347,18 @@ int AmlPlayerBase::startSubtitleDecoding()
         amlsub_SetPip(mSubtitleHandle, MODE_SUBTITLE_PIP_PLAYER, getPlayerId());
         MLOGI("cc setpip for subtitle playerId");
     }
+
+#ifdef __linux__
+#ifndef ANDROID
+    //ReportType
+    if (mSubSourceHandle != nullptr) {
+        if (SUB_STAT_OK != SubSource_ReportType(mSubSourceHandle, subParam.subtitleType)) {
+            MLOGE("SubSource_ReportType failed");
+        }
+        MLOGI("mSubSourceHandle, reportType:%d", subParam.subtitleType);
+    }
+#endif
+#endif
 
     if (AmlMpConfig::instance().mTsPlayerNonTunnel == 1) {
         int mediasyncId = getMediaSyncId();
@@ -313,9 +399,26 @@ int AmlPlayerBase::stopSubtitleDecoding()
     AmlSubtitleStatus ret = amlsub_Close(mSubtitleHandle);
     if (ret != SUB_STAT_OK) {
         MLOGE("amlsub_Close failed!");
-        return -1;
+
+        //subtitle bug, not return -1
+        //return -1;
+    }
+
+#ifdef __linux__
+#ifndef ANDROID
+    //the connection to the server will be disconnected
+    if (mSubSourceHandle != nullptr) {
+        if (SUB_STAT_OK != SubSource_Stop(mSubSourceHandle)) {
+            MLOGE("SubSource_Stop failed");
+        }
+        SubSource_Destroy(mSubSourceHandle);
+        mSubSourceHandle = nullptr;
+        MLOGE("SubSource_Destroy.");
     }
 #endif
+#endif
+
+#endif//HAVE_SUBTITLE
 
     return 0;
 }
@@ -369,12 +472,35 @@ int AmlPlayerBase::setParameter(Aml_MP_PlayerParameterKey key, void* parameter) 
 
 int AmlPlayerBase::writeEsData(Aml_MP_StreamType type, const uint8_t* buffer, size_t size, int64_t pts)
 {
+#ifdef __linux__
+#ifndef ANDROID
+
+#ifdef HAVE_SUBTITLE
+    SubSourceStatus ret;
+    if (mSubSourceHandle != nullptr) {
+        ret = SubSource_SendData(mSubSourceHandle, reinterpret_cast<const char *>(buffer), size, pts, mpSubtitleCodec2CodecID(mSubtitleParams.subtitleCodec));
+        //ret = SubSource_SendData(mSubSourceHandle, reinterpret_cast<const char *>(buffer), size);
+        if (SUB_STAT_OK != ret)
+        {
+            MLOGE("SubSource_SendData failed, type:%d(%s), size:%zu, pts:%" PRId64 ", CodeId:%d", type, mpStreamType2Str(type), size, pts, mpSubtitleCodec2CodecID(mSubtitleParams.subtitleCodec));
+        }
+
+        MLOGI_IF(AmlMpConfig::instance().mLogMask & kDebugFlagSubtitle, "SubSource_SendData type:%d(%s), size:%zu, pts:%" PRId64", CodeId:0x%x, ret:%d", type, mpStreamType2Str(type), size, pts, mpSubtitleCodec2CodecID(mSubtitleParams.subtitleCodec), ret);
+    }
+
+    return size;
+#endif//HAVE_SUBTITLE
+
+#endif
+#endif
+
     AML_MP_UNUSED(type);
     AML_MP_UNUSED(buffer);
     AML_MP_UNUSED(size);
     AML_MP_UNUSED(pts);
     //MLOGI("TODO!!! %s, type:%d, buffer:%p, size:%d, pts:%lld", __FUNCTION__, type, buffer, size, pts);
 
+    //always return size
     return size;
 }
 

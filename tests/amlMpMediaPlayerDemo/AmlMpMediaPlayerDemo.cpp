@@ -134,6 +134,9 @@ struct Argument
     int tunnelId = -1;
     int loopMode = 0;
     bool noSignalHandler = 0;
+    std::string licenseUrl;
+    uint64_t options = 0;
+    bool noAutoExit = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -166,6 +169,9 @@ struct playerRoster
         mPlayerArgument[id].tunnelId        = argument->tunnelId;
         mPlayerArgument[id].loopMode        = argument->loopMode;
         mPlayerArgument[id].noSignalHandler = argument->noSignalHandler;
+        mPlayerArgument[id].licenseUrl       = argument->licenseUrl;
+        mPlayerArgument[id].options         = argument->options;
+        mPlayerArgument[id].noAutoExit      = argument->noAutoExit;
 
         mPlayerPlayerDemo[id] = const_cast<struct AmlMpMediaPlayerDemo*>(demo);
 
@@ -195,6 +201,9 @@ struct playerRoster
         mPlayerArgument[id].tunnelId        = argument->tunnelId;
         mPlayerArgument[id].loopMode        = argument->loopMode;
         mPlayerArgument[id].noSignalHandler = argument->noSignalHandler;
+        mPlayerArgument[id].licenseUrl       = argument->licenseUrl;
+        mPlayerArgument[id].options         = argument->options;
+        mPlayerArgument[id].noAutoExit      = argument->noAutoExit;
         mLock.unlock();
 
         return id;
@@ -328,6 +337,9 @@ private:
             mPlayerArgument[i].tunnelId        = -1;
             mPlayerArgument[i].loopMode        = 0;
             mPlayerArgument[i].noSignalHandler = 0;
+            mPlayerArgument[i].licenseUrl      = "";
+            mPlayerArgument[i].options         = 0;
+            mPlayerArgument[i].noAutoExit      = 0;
             mPlayerPlayerDemo[i] = NULL;
 
             mPlayerHandlerCount = 0;
@@ -600,6 +612,30 @@ bool AmlMpMediaPlayerDemo::processCommand(const std::vector<std::string>& args)
     return ret;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+static char bitmapFileName[50] = "";
+static void save2BitmapFile(const char *filename, uint32_t *bitmap, int w, int h) {
+    FILE *f;
+    char fname[100];
+    snprintf(fname, sizeof(fname), "%s.ppm", filename);
+    f = fopen(fname, "w");
+    if (!f) {
+        ALOGE("Error cannot open file %s!", fname);
+        return;
+    }
+    fprintf(f, "P6\n" "%d %d\n" "%d\n", w, h, 255);
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            int v = bitmap[y * w + x];
+            putc((v >> 16) & 0xff, f);
+            putc((v >> 8) & 0xff, f);
+            putc((v >> 0) & 0xff, f);
+        }
+    }
+    printf("save2BitmapFile filename:%s\n", filename);
+    fclose(f);
+}
+
 static struct TestModule::Command g_commandTable[] = {
     {
         "h", 0, "help",
@@ -673,6 +709,24 @@ exit:
         [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
             int ret = Aml_MP_MediaPlayer_ShowVideo(player);
             printf("call show video,ret : %d\n",ret);
+            return ret;
+        }
+    },
+
+    {
+        "t", 0, "hide Subtitle",
+        [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
+            int ret = Aml_MP_MediaPlayer_HideSubtitle(player);
+            printf("call hide Subtitle, ret : %d\n",ret);
+            return ret;
+        }
+    },
+
+    {
+        "T", 0, "show Subtitle",
+        [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
+            int ret = Aml_MP_MediaPlayer_ShowSubtitle(player);
+            printf("call show Subtitle,ret : %d\n",ret);
             return ret;
         }
     },
@@ -1210,8 +1264,10 @@ exit:
                 printf("ID3Info track: %d\n", ID3Info.track);
                 printf("ID3Info genre: %s\n", ID3Info.genre);
                 printf("ID3Info copyright: %s\n", ID3Info.copyright);
+                printf("ID3Info pic_type: %s\n", ID3Info.pic_type);
+                printf("ID3Info pic_size: %d\n", ID3Info.pic_size);
+                printf("ID3Info pic_data: %p\n", ID3Info.pic_data);
             }
-
             return ret;
         }
     },
@@ -1234,6 +1290,8 @@ exit:
             argument.tunnelId = 1;
             argument.onlyVideo = false;
             argument.onlyAudio = false;
+            argument.licenseUrl = "";
+            argument.options = 0;
 
             try {
                 std::getline (std::cin, argument.url);
@@ -1386,6 +1444,7 @@ int AmlMpMediaPlayerDemo::installSignalHandler()
                 exit(0);
             }
             printf("Signal Capture:%s\n", strsignal(signo));
+            MLOGI("Signal Capture:%s\n", strsignal(signo));
 
             switch (signo) {
             case SIGINT:
@@ -1439,13 +1498,14 @@ static void printCurTrackInfo(Aml_MP_TrackInfo *trackInfo, Aml_MP_MediaInfo* med
                 sprintf(isSelect, "%s", ">");
             }
 
-            printf("   %s array index:%d, actual index:%d [video] id:%d, videoCodec:%d(%s), width:%d, height:%d, mine:%s\n"
+            printf("   %s array index:%d, actual index:%d [video] id:%d, videoCodec:%d(%s), frameRate:%f, width:%d, height:%d, mine:%s\n"
                 ,isSelect
                 ,index
                 ,info->streamInfo[index].u.vInfo.index
                 ,info->streamInfo[index].u.vInfo.id
                 ,info->streamInfo[index].u.vInfo.videoCodec
                 ,mpCodecId2Str(info->streamInfo[index].u.vInfo.videoCodec)
+                ,info->streamInfo[index].u.vInfo.frameRate
                 ,info->streamInfo[index].u.vInfo.width
                 ,info->streamInfo[index].u.vInfo.height
                 ,info->streamInfo[index].u.vInfo.mine);
@@ -1529,7 +1589,7 @@ static void printMediaInfo(Aml_MP_MediaInfo *mediaInfo)
     Aml_MP_MediaInfo *info = mediaInfo;
 
     printf("[mediaInfo] filename:%s, duration:%" PRId64 ", file_size:%" PRId64 ", bitrate:%" PRId64 ", nb_streams:%d" \
-            ", curVideoIndex:%" PRId64 ", curAudioIndex:%" PRId64 ", curSubIndex:%" PRId64 "\n"
+            ", curVideoIndex:%" PRId64 ", curAudioIndex:%" PRId64 ", curSubIndex:%" PRId64 ", subtitleShowState:%d\n"
             ,info->filename
             ,info->duration
             ,info->file_size
@@ -1537,7 +1597,8 @@ static void printMediaInfo(Aml_MP_MediaInfo *mediaInfo)
             ,info->nb_streams
             ,info->curVideoIndex
             ,info->curAudioIndex
-            ,info->curSubIndex);
+            ,info->curSubIndex
+            ,info->subtitleShowState);
     printf("\n");
 }
 
@@ -1690,6 +1751,15 @@ static int createMultiPlayback(int id, AML_MP_MEDIAPLAYER* player, struct Argume
         Aml_MP_MediaPlayer_SetLooping(*player, argument->loopMode);
     }
 
+    if (argument->licenseUrl.size() > 0)
+        Aml_MP_MediaPlayer_SetParameter(*player, AML_MP_MEDIAPLAYER_PARAMETER_SET_LICENSE_URL, (void*)argument->licenseUrl.c_str());
+
+    //player options
+    //Aml_MP_Option
+    if (argument->options) {
+        Aml_MP_MediaPlayer_SetParameter(*player, AML_MP_MEDIAPLAYER_PARAMETER_PLAYER_OPTIONS, (void*)(&argument->options));
+    }
+
     //setdatasource
     Aml_MP_MediaPlayer_SetDataSource(*player, argument->url.c_str());
     printf("\nAmlMpMediaPlayerDemo:%d ----------url: %s\n", id, argument->url.c_str());
@@ -1788,24 +1858,18 @@ static int isUrlValid(const std::string url, std::string& urlHead, std::string& 
 
     if (urlHead.compare("dclr") == 0) {
         urlFile = url.substr(pos + 1);
-        ret = 0;
-    }
-    /*
-    hclr-->HLS clear
-    vstb-->verimatrix IPTV
-    vwch-->verimatrix WEB Client HLS
-    nwch-->nagra WEB Client HLS
-    wcas-->widevine cas client
-    ncas-->nagra cas client
-    icas-->irdeto cas client
-    */
-    else if (urlHead.compare("hclr") == 0 ||
+
+        if (1 || access(urlFile.c_str(), F_OK) == 0) {
+            ret = 0;
+        }
+    } else if (urlHead.compare("hclr") == 0 ||
             urlHead.compare("vstb") == 0 ||
             urlHead.compare("vwch") == 0 ||
             urlHead.compare("nwch") == 0 ||
             urlHead.compare("wcas") == 0 ||
             urlHead.compare("ncas") == 0 ||
-            urlHead.compare("icas") == 0) {
+            urlHead.compare("icas") == 0 ||
+            urlHead.compare("wdrm") == 0) {
         ret = 0;
     }
 
@@ -1871,6 +1935,11 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
         {"id",          required_argument,  nullptr, 't'},
         {"loopMode",    required_argument,  nullptr, 'L'},
         {"noSignalHandler", no_argument,    nullptr, 'S'},
+        {"licenseUrl",  required_argument,  nullptr, 'l'},
+        {"options",     required_argument,  nullptr, 'o'},
+        {"loopMode",    required_argument,  nullptr, 'L'},
+        {"noSignalHandler", no_argument,    nullptr, 'S'},
+        {"noAutoExit",  no_argument,        nullptr, 'E'},
         {nullptr,       no_argument,        nullptr, 0},
     };
 
@@ -1949,6 +2018,25 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
             argument->noSignalHandler = true;
         }
         break;
+        case 'l':
+        {
+            argument->licenseUrl = std::string(optarg);
+            printf("licenseUrl:%s\n", argument->licenseUrl.c_str());
+        }
+        break;
+        case 'o':
+        {
+            uint64_t options = strtoul(optarg, nullptr, 0);
+            printf("options :0x%" PRIx64 "\n", options);
+            argument->options = options;
+        }
+        break;
+        case 'E':
+        {
+            printf("noAutoExit is set!\n");
+            argument->noAutoExit = true;
+        }
+        break;
 
         case 'h':
         default:
@@ -1977,6 +2065,10 @@ static const char* mediaPlayerMediaErrorType2Str(Aml_MP_MediaPlayerMediaErrorTyp
         ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_SERVER_ERROR);
         ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_ENOENT);
         ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_ETIMEDOUT);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_EIO);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_INVALID_KEY);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_LICENSE_ERR);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_DECRYPT_FAILED);
         default:
             return "unknowmn media error type";
     }
@@ -1985,12 +2077,31 @@ static const char* mediaPlayerMediaErrorType2Str(Aml_MP_MediaPlayerMediaErrorTyp
 void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t param)
 {
     AmlMpMediaPlayerDemo* demo = (AmlMpMediaPlayerDemo*)(userData);
+    struct Argument* argument = NULL;
 
     switch (event) {
+        case AML_MP_PLAYER_EVENT_SUBTITLE_DATA:
+        {
+            Aml_MP_SubtitleData *subtitleData = (Aml_MP_SubtitleData *)param;
+            static char cnt = 0;
+            ++cnt;
+            cnt &= 0x7;
+            if (subtitleData) {
+                snprintf(bitmapFileName, sizeof(bitmapFileName), "%s-%d", "/data/subtitle", cnt);
+                char *data = const_cast<char *>(subtitleData->data);
+                save2BitmapFile(bitmapFileName, (uint32_t *)data, subtitleData->width, subtitleData->height);
+            }
+            break;
+        }
         case AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE:
         {
-            printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
-            closeMultiPlayback(demo->mId);
+            AmlMpMediaPlayerDemo* demo = (AmlMpMediaPlayerDemo*)(userData);
+
+            playerRoster::instance().getPlayerArgument(demo->mId, &argument);
+            if (argument == NULL || !argument->noAutoExit) {
+                closeMultiPlayback(demo->mId);
+            }
+            printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE, id:%d, noAutoExit:%d\n",__FUNCTION__,__LINE__, demo->mId, argument == NULL ? -1 : argument->noAutoExit);
             break;
         }
         case AML_MP_MEDIAPLAYER_EVENT_PREPARED:
@@ -2013,6 +2124,11 @@ void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t par
         case AML_MP_MEDIAPLAYER_EVENT_STOPPED:
         {
             printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_STOPPED, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
+            break;
+        }
+        case AML_MP_MEDIAPLAYER_EVENT_FIRST_FRAME_TOGGLED:
+        {
+            printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_FIRST_FRAME_TOGGLED, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
             break;
         }
         case AML_MP_MEDIAPLAYER_EVENT_VIDEO_UNSUPPORT:
@@ -2074,6 +2190,8 @@ static void showOption()
     "         W.................Set Main Window Position\n"
     "         D.................Show Video\n"
     "         d.................Hide Video\n"
+    "         T.................Show Subtitle\n"
+    "         t.................Hide Subtitle\n"
     "\n"
     "PIP:\n"
     "         O.................Open PIP\n"
@@ -2101,6 +2219,17 @@ static void showUsage()
             "              1: wait play completed, then destroy player and recreate player\n"
             "              2: seek to beginning internally when play completed\n"
             "   --noSignalHandler       don't install signal handler\n"
+            "    --licenseUrl  eg: --licenseUrl=\"https://widevine-proxy.appspot.com/proxy\" \n"
+            "    --options    set options, eg: 3, 3 equals with 0b0011, so it means \"prefer tunerhal\" and \"monitor pid change\"\n"
+            "                 0-bit set 1 means prefer tunerhal:       AML_MP_OPTION_PREFER_TUNER_HAL\n"
+            "                 1-bit set 1 means monitor pid change:    AML_MP_OPTION_MONITOR_PID_CHANGE\n"
+            "                 2-bit set 1 means prefer CTC:            AML_MP_OPTION_PREFER_CTC\n"
+            "                 3-bit set 1 means report subtitle data:  AML_MP_OPTION_REPORT_SUBTITLE_DATA\n"
+            "   --loopMode <value>  \n"
+            "              1: wait play completed, then destroy player and recreate player\n"
+            "              2: seek to beginning internally when play completed\n"
+            "   --noSignalHandler       don't install signal handler\n"
+            "   --noAutoExit            don't exit at the end of playback\n"
             "\n"
             "url format:\n"
             "    clear ts, eg: dclr:http://10.28.8.30:8881/data/a.ts\n"

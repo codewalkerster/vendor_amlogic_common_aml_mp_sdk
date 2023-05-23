@@ -66,6 +66,8 @@ AmlMpPlayerImpl::AmlMpPlayerImpl(const Aml_MP_PlayerCreateParams* createParams)
     MLOG("sdk:%d, platform:%s, mTsPlayerNonTunnel: %d", sdkVersion, platform, AmlMpConfig::instance().mTsPlayerNonTunnel);
 #endif
 
+    MLOGI("%s", getCommitInfo().c_str());
+
     MLOG("drmMode:%s, sourceType:%s", mpInputStreamType2Str(createParams->drmMode), mpInputSourceType2Str(createParams->sourceType));
 
     memset(&mVideoParams, 0, sizeof(mVideoParams));
@@ -202,6 +204,11 @@ int AmlMpPlayerImpl::setAudioParams_l(const Aml_MP_AudioParams* params)
 
 int AmlMpPlayerImpl::setSubtitleParams(const Aml_MP_SubtitleParams* params)
 {
+    if (AmlMpConfig::instance().mDisableSubtitle) {
+        MLOGI("subtitle disabled!");
+        return 0;
+    }
+
     std::unique_lock<std::mutex> _l(mLock);
 
     if (getDecodingState_l(AML_MP_STREAM_TYPE_SUBTITLE) != AML_MP_DECODING_STATE_STOPPED) {
@@ -651,6 +658,15 @@ int AmlMpPlayerImpl::switchSubtitleTrack(const Aml_MP_SubtitleParams* params)
     if (mState == STATE_RUNNING || mState == STATE_PAUSED) {
         RETURN_IF(-1, mPlayer == nullptr);
         ret = mPlayer->switchSubtitleTrack(params);
+
+        if (ret < 0) {
+            MLOGE("%s failed!", __FUNCTION__);
+            return -1;
+        }
+
+        if (mSubtitleParams.subtitleCodec != AML_MP_CODEC_UNKNOWN) {
+            setDecodingState_l(AML_MP_STREAM_TYPE_SUBTITLE, AML_MP_DECODING_STATE_STARTED);
+        }
     }
 
     return ret;
@@ -1558,6 +1574,11 @@ int AmlMpPlayerImpl::startSubtitleDecoding_l()
     MLOG();
     RETURN_IF(-1, mPlayer == nullptr);
 
+    if (getDecodingState_l(AML_MP_STREAM_TYPE_SUBTITLE) == AML_MP_DECODING_STATE_STARTED) {
+        MLOGE("subtitle already started!");
+        return 0;
+    }
+
     if (mState == STATE_IDLE) {
         if (prepare_l() < 0) {
             MLOGE("prepare failed!");
@@ -1599,6 +1620,11 @@ int AmlMpPlayerImpl::stopSubtitleDecoding()
 int AmlMpPlayerImpl::stopSubtitleDecoding_l(std::unique_lock<std::mutex>& lock) {
     MLOG();
     RETURN_IF(-1, mPlayer == nullptr);
+
+    if (getDecodingState_l(AML_MP_STREAM_TYPE_SUBTITLE) == AML_MP_DECODING_STATE_STOPPED) {
+        MLOGE("subtitle already stopped!");
+        return 0;
+    }
 
     if (mState == STATE_RUNNING || mState == STATE_PAUSED) {
         if (mPlayer) {

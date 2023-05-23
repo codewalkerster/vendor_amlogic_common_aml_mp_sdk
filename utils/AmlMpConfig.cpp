@@ -42,6 +42,7 @@ void AmlMpConfig::initProperty(const char* propertyName, std::string& value)
 void AmlMpConfig::reset()
 {
     mLogDebug = 0;
+    mLogMask = 0;
 
     mTsPlayerNonTunnel = 0;
 #if ANDROID_PLATFORM_SDK_VERSION >= 30
@@ -64,6 +65,7 @@ void AmlMpConfig::reset()
     mSecMemSize = 0;
     mCasType = "none";
 
+    mDisableSubtitle = 0;
 }
 
 void AmlMpConfig::init()
@@ -75,6 +77,7 @@ void AmlMpConfig::init()
 #endif
 
     initProperty("vendor.amlmp.log-debug", mLogDebug);
+    initProperty("vendor.amlmp.log-mask", mLogMask);
     initProperty("vendor.amtsplayer.pipeline", mTsPlayerNonTunnel);
     initProperty("vendor.amlmp.waiting-ecm-mode", mWaitingEcmMode);
     initProperty("vendor.amlmp.write-buffer-size", mWriteBufferSize);
@@ -98,6 +101,7 @@ void AmlMpConfig::initLinux()
     }
 
     initProperty("vendor_amlmp_log_debug", mLogDebug);
+    initProperty("vendor_amlmp_log_mask", mLogMask);
     initProperty("TSPLAYER_PIPELINE", mTsPlayerNonTunnel);
     initProperty("vendor_amlmp_waiting_ecm_mode", mWaitingEcmMode);
     initProperty("vendor_amlmp_write_buffer_size", mWriteBufferSize);
@@ -106,6 +110,7 @@ void AmlMpConfig::initLinux()
     initProperty("vendor_cas_support_fcc_function", mCasFCCSupport);
     initProperty("vendor_secmem_size", mSecMemSize);
     initProperty("vendor_cas_type", mCasType);
+    initProperty("vendor_amlmp_disable_subtitle", mDisableSubtitle);
 }
 
 AmlMpConfig::AmlMpConfig()

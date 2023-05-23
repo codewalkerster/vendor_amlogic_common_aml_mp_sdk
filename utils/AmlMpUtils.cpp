@@ -11,6 +11,7 @@
 #include <utils/AmlMpLog.h>
 #include "AmlMpUtils.h"
 #include <unistd.h>
+#include <sstream>
 #include "utils/Amlsysfsutils.h"
 #ifdef HAVE_SUBTITLE
 #include <SubtitleNativeAPI.h>
@@ -93,6 +94,8 @@ const char* mpCodecId2Str(Aml_MP_CodecID codecId)
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_DVB);
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_TELETEXT);
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_TTML);//TTML Subtitle Support
+        ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_ASS);
+        ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_SUBRIP);
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_MAX);
         default: return "unknown codec Id";
     }
@@ -1448,6 +1451,31 @@ void hexdump(const uint8_t* data, size_t size, std::string& result)
 
         offset += 16;
     }
+}
+
+std::string getCommitInfo()
+{
+    std::stringstream ss;
+    ss << "\n----------------aml_mp_sdk VERSION INFO----------------\n";
+    ss << "ARCH:" <<
+#if defined(__aarch64__)
+          "arm64"
+#else
+          "arm"
+#endif
+    << "\n";
+
+#ifdef HAVE_VERSION_INFO
+    ss << "branch name:" << MODULE_BRANCH_NAME << "\n";
+    ss << "git version:" << MODULE_GIT_VERSION << "\n";
+    ss << "change-id:  " << MODULE_CHANGE_ID << "\n";
+    ss << "commit date:" << MODULE_COMMIT_DATE << "\n";
+    ss << "build-time: " << MODULE_BUILD_TIME << "\n";
+    ss << "build name: " << MODULE_BUILD_NAME << "\n";
+    ss << "dirty-file-num:" << MODULE_GIT_UNCOMMIT_FILE_NUM << "\n";
+    ss << "-------------------------------------------------------";
+#endif
+    return ss.str();
 }
 
 }

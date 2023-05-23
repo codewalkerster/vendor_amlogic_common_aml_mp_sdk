@@ -138,6 +138,7 @@ int AmlMediaPlayerBase::setSubtitleWindow(int x, int y, int width, int height)
     return -1;
 }
 
+/*
 int AmlMediaPlayerBase::showSubtitle()
 {
     MLOGI("showSubtitle");
@@ -153,6 +154,7 @@ int AmlMediaPlayerBase::hideSubtitle()
 
     return -1;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 void AmlMediaPlayerBase::notifyListener(Aml_MP_MediaPlayerEventType eventType, int64_t param)

@@ -616,7 +616,7 @@ int AmlMpMediaPlayerImpl::invoke(Aml_MP_MediaPlayerInvokeRequest* request, Aml_M
 {
     AML_MP_TRACE(10);
     std::unique_lock<std::mutex> _l(mLock);
-    MLOG();
+    //MLOG();
 
     return invoke_l(request, reply);
 }

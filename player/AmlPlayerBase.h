@@ -14,7 +14,14 @@
 #include <Aml_MP/Aml_MP.h>
 #ifdef HAVE_SUBTITLE
 #include <SubtitleNativeAPI.h>
-#endif
+
+#ifdef __linux__
+#ifndef ANDROID
+#include <SubtitleReportAPI.h>
+#endif//ANDROID
+#endif//__linux__
+
+#endif//HAVE_SUBTITLE
 
 struct ANativeWindow;
 
@@ -119,6 +126,12 @@ private:
 #ifdef HAVE_SUBTITLE
     static bool constructAmlSubtitleParam(AmlSubtitleParam* amlSubParam, Aml_MP_SubtitleParams* params);
     AmlSubtitleHnd mSubtitleHandle = nullptr;
+#ifdef __linux__
+#ifndef ANDROID
+    CodecID mpSubtitleCodec2CodecID(Aml_MP_CodecID codecId);
+    SubSourceHandle mSubSourceHandle = nullptr;
+#endif
+#endif
 
     //Subtitle info
     Aml_MP_SubtitleData mSubtitleData;

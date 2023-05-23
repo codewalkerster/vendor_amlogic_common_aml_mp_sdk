@@ -14,6 +14,12 @@
 namespace aml_mp {
 
 
+enum {
+    kDebugFlagStatistic =  1 << 0,
+    kDebugFlagSubtitle  =  1 << 1,
+    kDebugFlagNone =   1 << 31,
+};
+
 class AmlMpConfig
 {
 public:
@@ -27,6 +33,7 @@ public:
 
 public:
     int mLogDebug;
+    int mLogMask;
     int mTsPlayerNonTunnel;
     int mUseVideoTunnel;
     int mWaitingEcmMode;
@@ -37,6 +44,7 @@ public:
     int mCasFCCSupport;
     int mSecMemSize;
     std::string mCasType;
+    int mDisableSubtitle;
 private:
     void reset();
 

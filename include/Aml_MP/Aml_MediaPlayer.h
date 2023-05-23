@@ -41,6 +41,11 @@ typedef enum {
 
     AML_MP_MEDIAPLAYER_MEDIA_ERROR_ENOENT      = 0x2000,  //No such file or directory
     AML_MP_MEDIAPLAYER_MEDIA_ERROR_ETIMEDOUT,             //Timed out
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_EIO,                   //I/O error
+
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_INVALID_KEY   = 0x3000,   //Invalid key
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_LICENSE_ERR,              //License server error
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_DECRYPT_FAILED,           //Decrypt failed
 } Aml_MP_MediaPlayerMediaErrorType;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -54,6 +59,7 @@ typedef struct {
     Aml_MP_CodecID          videoCodec;
     uint32_t                width;
     uint32_t                height;
+    double                  frameRate;
     char mine[AML_MP_MAX_STREAM_PARAMETER_SIZE];
     long reserved[8];
 } Aml_MP_VideoTrackInfo;
@@ -115,6 +121,7 @@ typedef struct {
     int64_t curVideoIndex;
     int64_t curAudioIndex;
     int64_t curSubIndex;
+    bool    subtitleShowState;
     long reserved[8];
 } Aml_MP_MediaInfo;
 
@@ -152,6 +159,8 @@ typedef enum {
     AML_MP_MEDIAPLAYER_PARAMETER_ONLYHINT_TYPE,                        //setOnlyHintType(Aml_MP_MediaPlayerOnlyHintType*)
     AML_MP_MEDIAPLAYER_PARAMETER_VIDEO_TUNNEL_ID,                      //setVideoTunnelID(int*)
     AML_MP_MEDIAPLAYER_PARAMETER_CHANNEL_ID,                           //0:main,others:pip
+    AML_MP_MEDIAPLAYER_PARAMETER_SET_LICENSE_URL,                      // set license url
+    AML_MP_MEDIAPLAYER_PARAMETER_PLAYER_OPTIONS,                       //setPlayerOptions(uint64_t*)
     AML_MP_MEDIAPLAYER_PARAMETER_ID3_INFO,                             //getID3Info(Aml_MP_MediaPlayerID3Info*)
 } Aml_MP_MediaPlayerParameterKey;
 
@@ -164,18 +173,23 @@ typedef enum {
 
 ////////////////////////////////////////////
 //Aml_MP_MediaPlayerID3Info
+//pic_data pointer does not need to be released by user.
 typedef struct
 {
-    char title[40];                                                 //MP3_ID3_title
-    char author[40];                                                //MP3_ID3_artist
-    char album[40];                                                 //MP3_ID3_album
-    char comment[40];                                               //MP3_ID3_comment
-    char year[4];                                                   //MP3_ID3_year
-    int track;                                                      //MP3_ID3_track
-    char genre[32];                                                 //MP3_ID3_genre
-    char copyright[40];                                             //MP3_ID3_copyright
+    char title[AML_MP_MAX_PATH_SIZE];                                //MP3_ID3_title
+    char author[AML_MP_MAX_PATH_SIZE];                               //MP3_ID3_artist
+    char album[AML_MP_MAX_PATH_SIZE];                                //MP3_ID3_album
+    char comment[AML_MP_MAX_PATH_SIZE];                              //MP3_ID3_comment
+    char year[5];                                                    //MP3_ID3_year
+    int track;                                                       //MP3_ID3_track
+    char genre[32];                                                  //MP3_ID3_genre
+    char copyright[AML_MP_MAX_PATH_SIZE];                            //MP3_ID3_copyright
+    char pic_type[20];                                               //MP3_ID3_picture_type
+    int pic_size;                                                    //MP3_ID3_picture_size
+    unsigned char *pic_data;                                         //MP3_ID3_picture_data
     long reserved[8];
 } Aml_MP_MediaPlayerID3Info;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //********************* BASIC INTERFACES BEGIN **************************/
@@ -427,7 +441,7 @@ int Aml_MP_MediaPlayer_SetPlaybackRate(AML_MP_MEDIAPLAYER handle, float rate);
  *
  * \param [in] player handle
  *
- * \return 0 if success
+ * \return true if playing
  */
 bool Aml_MP_MediaPlayer_IsPlaying(AML_MP_MEDIAPLAYER handle);
 
@@ -437,7 +451,7 @@ bool Aml_MP_MediaPlayer_IsPlaying(AML_MP_MEDIAPLAYER handle);
  *
  * \param [in] player handle
  *
- * \return true if playing
+ * \return 0 if success
  */
 int Aml_MP_MediaPlayer_ShowVideo(AML_MP_MEDIAPLAYER handle);
 
@@ -450,6 +464,26 @@ int Aml_MP_MediaPlayer_ShowVideo(AML_MP_MEDIAPLAYER handle);
  * \return 0 if success
  */
 int Aml_MP_MediaPlayer_HideVideo(AML_MP_MEDIAPLAYER handle);
+
+/**
+ * \brief  Aml_MP_MediaPlayer_ShowSubtitle
+ * Show Subtitle
+ *
+ * \param [in] player handle
+ *
+ * \return 0 if success
+ */
+int Aml_MP_MediaPlayer_ShowSubtitle(AML_MP_MEDIAPLAYER handle);
+
+/**
+ * \brief  Aml_MP_MediaPlayer_HideSubtitle
+ * Hide Subtitle
+ *
+ * \param [in] player handle
+ *
+ * \return 0 if success
+ */
+int Aml_MP_MediaPlayer_HideSubtitle(AML_MP_MEDIAPLAYER handle);
 
 /**
  * \brief  Aml_MP_MediaPlayer_SetAVSyncSource
