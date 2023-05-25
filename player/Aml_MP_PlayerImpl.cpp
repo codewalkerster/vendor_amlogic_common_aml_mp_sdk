@@ -125,13 +125,10 @@ AmlMpPlayerImpl::~AmlMpPlayerImpl()
     MLOG();
 
     if (mState != STATE_IDLE) {
-        std::unique_lock<std::mutex> lock(mLock);
-        resetIfNeeded_l(lock);
+        MLOG("Waring!! mState is not STATE_IDLE. Force to stop enter.");
+        stop();
+        MLOG("Force to stop exit.");
     }
-
-    AML_MP_CHECK(mState == STATE_IDLE);
-    AML_MP_CHECK(mStreamState == 0);
-
     // recover demux sec mem size to default, this value same as DMC_MEM_DEFAULT_SIZE
     recoverDmxSecMemSize();
 
