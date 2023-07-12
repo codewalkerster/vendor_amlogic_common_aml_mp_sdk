@@ -28,11 +28,12 @@ public:
     int pause();
     int resume();
     int getStatus(Aml_MP_DVRRecorderStatus* status);
+    int isSecureMode() const;
+    int setEncryptParams(Aml_MP_DVRRecorderEncryptParams* encryptParams);
 
 private:
     int setBasicParams(Aml_MP_DVRRecorderBasicParams* basicParams);
     int setTimeShiftParams(Aml_MP_DVRRecorderTimeShiftParams* timeShiftParams);
-    int setEncryptParams(Aml_MP_DVRRecorderEncryptParams* encryptParams);
     int setSharedParams(Aml_MP_DVRRecorderBasicParams* basicParams);
 
     DVR_Result_t eventHandler(DVR_RecordEvent_t event, void* params);
@@ -41,8 +42,7 @@ private:
     DVR_WrapperRecordOpenParams_t mRecOpenParams{};
     DVR_WrapperRecordStartParams_t mRecStartParams{};
     DVR_WrapperRecord_t mRecoderHandle = nullptr;
-
-    bool mIsEncryptStream;
+    bool mStarted = false;
     uint8_t* mSecureBuffer = nullptr;
     size_t mSecureBufferSize = 0;
 

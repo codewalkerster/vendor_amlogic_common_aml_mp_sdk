@@ -116,6 +116,26 @@ int Aml_MP_DVRRecorder_GetStatus(AML_MP_DVRRECORDER recorder, Aml_MP_DVRRecorder
     return ret;
 }
 
+int Aml_MP_DVRRecorder_IsSecureMode(AML_MP_DVRRECORDER recorder)
+{
+    sptr<AmlDVRRecorder> amlMpHandle = aml_handle_cast<AmlDVRRecorder>(recorder);
+    RETURN_IF(-1, amlMpHandle == nullptr);
+
+    int ret = amlMpHandle->isSecureMode();
+
+    return ret;
+}
+
+int Aml_MP_DVRRecorder_SetEncryptParams(AML_MP_DVRRECORDER recorder, Aml_MP_DVRRecorderEncryptParams* encryptParams)
+{
+    sptr<AmlDVRRecorder> amlMpHandle = aml_handle_cast<AmlDVRRecorder>(recorder);
+    RETURN_IF(-1, amlMpHandle == nullptr);
+
+    int ret = amlMpHandle->setEncryptParams(encryptParams);
+
+    return ret;
+}
+
 int Aml_MP_DVRRecorder_GetSegmentList(const char* location, uint32_t* segmentNums, uint64_t** segmentIds)
 {
     return dvr_segment_get_list(location, segmentNums, segmentIds);

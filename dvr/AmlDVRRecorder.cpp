@@ -30,10 +30,11 @@ AmlDVRRecorder::AmlDVRRecorder(Aml_MP_DVRRecorderBasicParams* basicParams, Aml_M
 
     memset(&mRecOpenParams, 0, sizeof(DVR_WrapperRecordOpenParams_t));
     memset(&mRecStartParams, 0, sizeof(DVR_WrapperRecordStartParams_t));
-    setBasicParams(basicParams);
+    memset(&mRecordPids, 0, sizeof(mRecordPids));
 
-    mIsEncryptStream = basicParams->flags & AML_MP_DVRRECORDER_SCRAMBLED;
+    setBasicParams(basicParams);
     mIsOutData = mRecOpenParams.flags & AML_MP_DVRRECORDER_DATAOUT;
+
     if (basicParams->isTimeShift) {
         setTimeShiftParams(timeShiftParams);
     }
@@ -46,17 +47,26 @@ AmlDVRRecorder::AmlDVRRecorder(Aml_MP_DVRRecorderBasicParams* basicParams, Aml_M
         setEncryptParams(encryptParams);
     }
 
-    if (basicParams->appendMode) {
-        mRecStartParams.save_rec_file = basicParams->appendMode;
-        MLOGI("save_rec_file=%d with same location", basicParams->appendMode);
-    }
+    mRecOpenParams.event_fn = [] (DVR_RecordEvent_t event, void* params, void* userData) {
+        AmlDVRRecorder* recorder = static_cast<AmlDVRRecorder*>(userData);
+        return recorder->eventHandler(event, params);
+    };
+    mRecOpenParams.event_userdata = this;
 
-    memset(&mRecordPids, 0, sizeof(mRecordPids));
+    int ret = dvr_wrapper_open_record(&mRecoderHandle, &mRecOpenParams);
+    if (ret < 0) {
+        MLOGE("Open dvr record fail");
+    }
 }
 
 AmlDVRRecorder::~AmlDVRRecorder()
 {
     MLOG();
+
+    int ret = dvr_wrapper_close_record(mRecoderHandle);
+    if (ret) {
+        MLOGE("close recorder failed!");
+    }
 }
 
 int AmlDVRRecorder::registerEventCallback(Aml_MP_DVRRecorderEventCallback cb, void* userData)
@@ -130,13 +140,10 @@ int AmlDVRRecorder::setStreams(Aml_MP_DVRStreamArray* streams)
         }
     }
 
-    MLOG("request nbStreams:%d, actual count:%d", streams->nbStreams, count);
+    MLOG("request nbStreams:%d, actual count:%d, mStarted:%d", streams->nbStreams, count, mStarted);
 
-    //start play
-    if (!mRecoderHandle) {
-        mRecStartParams.pids_info.nb_pids = count;
-        memcpy(mRecStartParams.pids_info.pids, pids, sizeof(mRecStartParams.pids_info.pids));
-    } else {
+    //update streams
+    if (mStarted) {
         DVR_WrapperUpdatePidsParams_t updatePidParams;
         updatePidParams.nb_pids = count;
         memcpy(updatePidParams.pids, pids, sizeof(updatePidParams.pids));
@@ -182,24 +189,18 @@ int AmlDVRRecorder::setStreams(Aml_MP_DVRStreamArray* streams)
     mRecordPids.nb_pids = count;
     memcpy(mRecordPids.pids, pids, sizeof(mRecordPids.pids));
 
+    //save/update start pids info
+    mRecStartParams.pids_info.nb_pids = count;
+    memcpy(mRecStartParams.pids_info.pids, pids, sizeof(mRecStartParams.pids_info.pids));
+
     return 0;
 }
 
 int AmlDVRRecorder::start()
 {
+    int ret = 0;
     MLOGI("Call DVRRecorderStart");
 
-    mRecOpenParams.event_fn = [] (DVR_RecordEvent_t event, void* params, void* userData) {
-        AmlDVRRecorder* recorder = static_cast<AmlDVRRecorder*>(userData);
-        return recorder->eventHandler(event, params);
-    };
-    mRecOpenParams.event_userdata = this;
-
-    int ret = dvr_wrapper_open_record(&mRecoderHandle, &mRecOpenParams);
-    if (ret < 0) {
-        MLOGE("Open dvr record fail");
-        return -1;
-    }
 #if !defined (ANDROID) || ANDROID_PLATFORM_SDK_VERSION >= 30
     if (mIsOutData) {
         Segment_DataoutCallback_t share_cb = { mSharedCb, mSharedUserData};
@@ -207,21 +208,28 @@ int AmlDVRRecorder::start()
         dvr_wrapper_ioctl_record(mRecoderHandle, SEGMENT_DATAOUT_CMD_SET_CALLBACK, &share_cb , sizeof(share_cb));
     }
 #endif
-    if (mIsEncryptStream) {
+    if (mSecureBuffer != nullptr) {
         MLOGI("set secureBuffer:%p, secureBufferSize:%zu", mSecureBuffer, mSecureBufferSize);
         dvr_wrapper_set_record_secure_buffer(mRecoderHandle, mSecureBuffer, mSecureBufferSize);
     }
 
+    if (mRecOpenParams.crypto_fn) {
+        MLOGI("set cryptoFn:%p, cryptoData:%p", mRecOpenParams.crypto_fn, mRecOpenParams.crypto_data);
+        dvr_wrapper_set_record_decrypt_callback(mRecoderHandle,
+                mRecOpenParams.crypto_fn,
+                mRecOpenParams.crypto_data);
+    }
+
     if (mRecStartParams.pids_info.nb_pids > 0) {
         ret = dvr_wrapper_start_record(mRecoderHandle, &mRecStartParams);
-        if (ret < 0) {
-            dvr_wrapper_close_record(mRecoderHandle);
+        if (ret == DVR_SUCCESS) {
+            mStarted = true;
+        } else {
             MLOGE("Failed to start recording.");
             return -1;
         }
     } else {
         MLOGE("Need set start params before start");
-        ret = 0;
     }
 
     return 0;
@@ -232,11 +240,11 @@ int AmlDVRRecorder::stop()
     MLOGI("Call DVRRecorderStop");
 
     int ret = dvr_wrapper_stop_record(mRecoderHandle);
-    if (ret) {
-        MLOGI("Stop recoder fail");
+    if (ret == DVR_SUCCESS) {
+        mStarted = false;
+    } else {
+        MLOGI("Stop recoder failed");
     }
-    //Add support cas
-    ret = dvr_wrapper_close_record(mRecoderHandle);
 
     return ret;
 }
@@ -275,6 +283,28 @@ int AmlDVRRecorder::getStatus(Aml_MP_DVRRecorderStatus* status)
     return 0;
 }
 
+int AmlDVRRecorder::isSecureMode() const
+{
+    return dvr_wrapper_record_is_secure_mode(mRecoderHandle);
+}
+
+int AmlDVRRecorder::setEncryptParams(Aml_MP_DVRRecorderEncryptParams* encryptParams)
+{
+    mRecOpenParams.crypto_period.interval_bytes = encryptParams->intervalBytes;
+    mRecOpenParams.crypto_period.notify_clear_periods = encryptParams->notifyClearPeriods;
+    mRecOpenParams.crypto_fn = (DVR_CryptoFunction_t)encryptParams->cryptoFn;
+    mRecOpenParams.crypto_data = encryptParams->cryptoData;
+
+    mSecureBuffer = encryptParams->secureBuffer;
+    mSecureBufferSize = encryptParams->secureBufferSize;
+
+    mRecOpenParams.clearkey = encryptParams->clearKey;
+    mRecOpenParams.cleariv = encryptParams->clearIV;
+    mRecOpenParams.keylen = encryptParams->keyLength;
+
+    return 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 int AmlDVRRecorder::setBasicParams(Aml_MP_DVRRecorderBasicParams* basicParams)
 {
@@ -287,6 +317,11 @@ int AmlDVRRecorder::setBasicParams(Aml_MP_DVRRecorderBasicParams* basicParams)
     mRecOpenParams.ringbuf_size = basicParams->ringbufSize;
     mRecOpenParams.force_sysclock = basicParams->forceSysClock;
     MLOGI("location:%s", basicParams->location);
+
+    if (basicParams->appendMode) {
+        mRecStartParams.save_rec_file = basicParams->appendMode;
+        MLOGI("save_rec_file=%d with same location", basicParams->appendMode);
+    }
 
     return 0;
 }
@@ -303,23 +338,6 @@ int AmlDVRRecorder::setTimeShiftParams(Aml_MP_DVRRecorderTimeShiftParams* timeSh
     mRecOpenParams.max_size = timeShiftParams->maxSize;
     mRecOpenParams.max_time = timeShiftParams->maxTime;
     mRecOpenParams.is_timeshift = DVR_TRUE;
-
-    return 0;
-}
-
-int AmlDVRRecorder::setEncryptParams(Aml_MP_DVRRecorderEncryptParams* encryptParams)
-{
-    mRecOpenParams.crypto_period.interval_bytes = encryptParams->intervalBytes;
-    mRecOpenParams.crypto_period.notify_clear_periods = encryptParams->notifyClearPeriods;
-    mRecOpenParams.crypto_fn = (DVR_CryptoFunction_t)encryptParams->cryptoFn;
-    mRecOpenParams.crypto_data = encryptParams->cryptoData;
-
-    mSecureBuffer = encryptParams->secureBuffer;
-    mSecureBufferSize = encryptParams->secureBufferSize;
-
-    mRecOpenParams.clearkey = encryptParams->clearKey;
-    mRecOpenParams.cleariv = encryptParams->clearIV;
-    mRecOpenParams.keylen = encryptParams->keyLength;
 
     return 0;
 }

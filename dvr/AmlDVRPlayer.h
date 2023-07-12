@@ -76,6 +76,7 @@ private:
     uint32_t mRecStartTime;
     uint32_t mLimit;
     int32_t mAudioPresentationId;
+    int mStartOffset;
 
     int setBasicParams(Aml_MP_DVRPlayerBasicParams* basicParams);
     int setDecryptParams(Aml_MP_DVRPlayerDecryptParams* decryptParams);
@@ -86,6 +87,8 @@ private:
 #endif
 
     int createMpPlayerIfNeeded();
+    int stopInternal();
+
     AML_MP_PLAYER mMpPlayerHandle = AML_MP_INVALID_HANDLE;
     Aml_MP_InputStreamType mInputStreamType = AML_MP_INPUT_STREAM_NORMAL;
     Aml_MP_VideoParams mVideoParams;

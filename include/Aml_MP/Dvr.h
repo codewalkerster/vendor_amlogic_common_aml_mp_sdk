@@ -44,8 +44,8 @@ typedef struct {
 } Aml_MP_DVRRecorderBasicParams;
 
 typedef struct {
-    int64_t                     maxSize;
-    int64_t                     maxTime;
+    int64_t                     maxSize;            /**< Maximum record file size in bytes. 0 means not set size limit.*/
+    int64_t                     maxTime;            /**< Maximum record time in milliseconds. 0 means not set time limit*/
     long                        reserved[8];
 } Aml_MP_DVRRecorderTimeShiftParams;
 
@@ -208,6 +208,27 @@ int Aml_MP_DVRRecorder_Resume(AML_MP_DVRPLAYER player);
  * \return 0 if success
  */
 int Aml_MP_DVRRecorder_GetStatus(AML_MP_DVRRECORDER recorder, Aml_MP_DVRRecorderStatus* status);
+
+/**
+ * \brief Aml_MP_DVRRecorder_IsSecureMode
+ *
+ * \param [in] recorder DVR recorder handle
+ *
+ * \return  1: secure mode
+ *          0: clear mode
+ *         -1: error
+ */
+int Aml_MP_DVRRecorder_IsSecureMode(AML_MP_DVRRECORDER recorder);
+
+/**
+ * \brief Aml_MP_DVRRecorder_SetEncryptParams
+ *
+ * \param recorder DVR recorder handle
+ * \param encryptParams new encryption parameters
+ *
+ * \return 0 if success
+ */
+int Aml_MP_DVRRecorder_SetEncryptParams(AML_MP_DVRRECORDER recorder, Aml_MP_DVRRecorderEncryptParams* encryptParams);
 
 /**
  * \brief Aml_MP_DVRRecorder_GetSegmentList

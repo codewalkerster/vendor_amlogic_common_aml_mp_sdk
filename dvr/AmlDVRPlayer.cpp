@@ -58,6 +58,7 @@ AmlDVRPlayer::AmlDVRPlayer(Aml_MP_DVRPlayerBasicParams* basicParams, Aml_MP_DVRP
     mAudioPresentationId = -1;
     mIsEncryptStream = basicParams->drmMode != AML_MP_INPUT_STREAM_NORMAL;
     mInputStreamType = basicParams->drmMode;
+    mStartOffset = -1;
 
     if (decryptParams != nullptr) {
         setDecryptParams(decryptParams);
@@ -125,7 +126,7 @@ int AmlDVRPlayer::onlySetStreams(Aml_MP_DVRStreamArray* streams)
 int AmlDVRPlayer::start(bool initialPaused)
 {
     MLOG();
-
+    DVR_PlaybackFlag_t play_flag;
     int ret = createMpPlayerIfNeeded();
     if (ret != 0) {
         return -1;
@@ -142,7 +143,7 @@ int AmlDVRPlayer::start(bool initialPaused)
     ret = Aml_MP_Player_GetParameter(mMpPlayerHandle, AML_MP_PLAYER_PARAMETER_TSPLAYER_HANDLE, (void *)&mTsPlayerHandle);
     MLOGI(" MpPlayer get ts player handle %s, result(%d)", (ret)? "FAIL" : "OK", ret);
     if (ret != 0) {
-        return ret;
+        goto err;
     }
 
     mPlaybackOpenParams.playback_handle = (Playback_DeviceHandle_t)mTsPlayerHandle;
@@ -154,10 +155,10 @@ int AmlDVRPlayer::start(bool initialPaused)
 
     //apply parameters
     mPlaybackOpenParams.vendor = (DVR_PlaybackVendor_t)mVendorID;
-    int error = dvr_wrapper_open_playback(&mDVRPlayerHandle, &mPlaybackOpenParams);
-    if (error < 0) {
+    ret = dvr_wrapper_open_playback(&mDVRPlayerHandle, &mPlaybackOpenParams);
+    if (ret < 0) {
         MLOGE("open playback failed!");
-        return error;
+        goto err;
     }
 
     if (mIsEncryptStream) {
@@ -167,37 +168,56 @@ int AmlDVRPlayer::start(bool initialPaused)
     if (mRecStartTime > 0) {
         dvr_wrapper_setlimit_playback(mDVRPlayerHandle, mRecStartTime, mLimit);
     }
-    DVR_PlaybackFlag_t play_flag = initialPaused ? DVR_PLAYBACK_STARTED_PAUSEDLIVE : (DVR_PlaybackFlag_t)0;
-    error = dvr_wrapper_start_playback(mDVRPlayerHandle, play_flag, &mPlayPids);
-    return error;
+    play_flag = initialPaused ? DVR_PLAYBACK_STARTED_PAUSEDLIVE : (DVR_PlaybackFlag_t)0;
+    ret = dvr_wrapper_start_playback(mDVRPlayerHandle, play_flag, &mPlayPids);
+    if (ret != DVR_SUCCESS) {
+        MLOGE("start playback failed!");
+        goto err;
+    } else if (mStartOffset >= 0) {
+        seek(mStartOffset);
+        mStartOffset = -1;
+    }
+
+    return 0;
+
+err:
+    stopInternal();
+
+    return ret;
 }
+
 
 int AmlDVRPlayer::stop()
 {
     MLOG();
 
+    return stopInternal();
+}
+
+int AmlDVRPlayer::stopInternal()
+{
     int ret = 0;
 
-    ret = dvr_wrapper_stop_playback(mDVRPlayerHandle);
-    if (ret < 0) {
-        MLOGE("ts player stop playback failed!");
-    }
+    if (mDVRPlayerHandle) {
+        ret = dvr_wrapper_stop_playback(mDVRPlayerHandle);
+        if (ret < 0) {
+            MLOGE("dvr player stop playback failed!");
+        }
 
-    ret = Aml_MP_Player_Stop(mMpPlayerHandle);
-    if (ret < 0) {
-        MLOGE("mp player stop playback failed!");
-    }
-
-    //Add support cas
-    if (mIsEncryptStream) {
-    }
-
-    ret = dvr_wrapper_close_playback(mDVRPlayerHandle);
-    if (ret < 0) {
-        MLOGE("ts player close playback failed!");
+        DVR_WrapperPlayback_t tmp = mDVRPlayerHandle;
+        mDVRPlayerHandle = 0;
+        ret = dvr_wrapper_close_playback(tmp);
+        if (ret < 0) {
+            MLOGE("dvr player close playback failed!");
+        }
     }
 
     if (mMpPlayerHandle != AML_MP_INVALID_HANDLE) {
+        ret = Aml_MP_Player_Stop(mMpPlayerHandle);
+        if (ret < 0) {
+            MLOGE("mp player stop playback failed!");
+        }
+
         AML_MP_PLAYER tmpHandle = mMpPlayerHandle;
         mMpPlayerHandle = AML_MP_INVALID_HANDLE;
         ret = Aml_MP_Player_Destroy(tmpHandle);
@@ -205,6 +225,9 @@ int AmlDVRPlayer::stop()
             MLOGE("mp player close playback failed!");
         }
     }
+
+    mStartOffset = -1;
+
     return 0;
 }
 
@@ -261,9 +284,16 @@ int AmlDVRPlayer::seek(int timeOffset)
 {
     MLOG("timeOffset:%d", timeOffset);
 
-    int ret = dvr_wrapper_seek_playback(mDVRPlayerHandle, timeOffset);
-    if (ret < 0) {
-        MLOGE("seek playback %d failed!", timeOffset);
+    int ret = 0;
+
+    if (mDVRPlayerHandle) {
+        ret = dvr_wrapper_seek_playback(mDVRPlayerHandle, timeOffset);
+        if (ret < 0) {
+            MLOGE("seek playback %d failed!", timeOffset);
+        }
+    } else {
+        mStartOffset = timeOffset;
+        MLOGE("AmlDVRPlayer not started, store offset %d.", mStartOffset);
     }
 
     return ret;
