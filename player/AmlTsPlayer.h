@@ -12,8 +12,11 @@
 
 #include "AmlPlayerBase.h"
 #include <AmTsPlayer.h>
+#include <queue>
 #include <utils/AmlMpUtils.h>
 #include <utils/AmlMpBuffer.h>
+#include <utils/AmlMpThread.h>
+#include <utils/AmlMpRefBase.h>
 #ifdef ANDROID
 namespace android {
 class NativeHandle;
@@ -42,6 +45,7 @@ public:
     int switchAudioTrack(const Aml_MP_AudioParams* params) override;
     int writeData(const uint8_t* buffer, size_t size) override;
     int writeEsData(Aml_MP_StreamType type, const uint8_t* buffer, size_t size, int64_t pts) override;
+    int writeEsData_l(Aml_MP_StreamType type, const uint8_t* buffer, size_t size, int64_t pts);
     int getCurrentPts(Aml_MP_StreamType type, int64_t* pts) override;
     int getFirstPts(Aml_MP_StreamType type, int64_t* pts) override;
     int getBufferStat(Aml_MP_BufferStat* bufferStat) override;
@@ -98,6 +102,32 @@ private:
             const uint8_t *PES_private_data, size_t PES_private_data_len,
             size_t numStuffingBytes, int64_t timeUs);
     int incrementContinuityCounter(int isAudio);
+    class AudioEsDataFeedThread : virtual public AmlMpThread {
+    public:
+        AudioEsDataFeedThread(sptr<AmlTsPlayer> player) : mPlayer(player) {
+            snprintf(mName, sizeof(mName), "AudioEsDataFeedThread");
+        };
+        ~AudioEsDataFeedThread() {};
+        bool threadLoop() override;
+        void start();
+        int writeEsData(const uint8_t* buffer, size_t size, int64_t pts);
+        void pause();
+        void flush();
+        void resume();
+        void stop();
+        struct AudioEsBuffer {
+            uint8_t *addr;
+            size_t size;
+            int64_t pts;
+        };
+        sptr<AmlTsPlayer> mPlayer;
+        mutable std::mutex mLock;
+        bool mPaused = false;
+        std::queue<struct AudioEsBuffer> mAudioEsQueue;
+        char mName[50];
+    };
+
+    sptr<AudioEsDataFeedThread> mAudioEsDataFeedThread;
 
 private:
     AmlTsPlayer(const AmlTsPlayer&) = delete;

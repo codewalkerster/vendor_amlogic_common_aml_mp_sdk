@@ -120,10 +120,14 @@ bool BufferQueue::Buffer::needRecycle() const
 #ifdef ANDROID
     result = true;
 #else
-    if (mIsNonTunnelMode && mStreamType == AML_MP_STREAM_TYPE_VIDEO) {
+    if (mIsNonTunnelMode) {
         result = true;
     }
 #endif
+
+    if (mStreamType == AML_MP_STREAM_TYPE_AUDIO) {
+        result = true;
+    }
 
     return result;
 }

@@ -23,6 +23,77 @@
 
 namespace aml_mp {
 
+void AmlTsPlayer::AudioEsDataFeedThread::start()
+{
+    run("AudioEsDataFeedThread");
+}
+int AmlTsPlayer::AudioEsDataFeedThread::writeEsData(const uint8_t* buffer, size_t size, int64_t pts)
+{
+    std::unique_lock<std::mutex> _l(mLock);
+    if (mAudioEsQueue.size() > 100) {
+        return -1;
+    }
+    struct AudioEsBuffer audioBuffer = {
+        .addr = (uint8_t*)buffer,
+        .size = size,
+        .pts = pts,
+    };
+    mAudioEsQueue.push(audioBuffer);
+    return size;
+}
+void AmlTsPlayer::AudioEsDataFeedThread::pause()
+{
+    std::unique_lock<std::mutex> _l(mLock);
+    mPaused = true;
+}
+void AmlTsPlayer::AudioEsDataFeedThread::flush()
+{
+    std::unique_lock<std::mutex> _l(mLock);
+    struct AudioEsBuffer audioBuffer;
+    while (mAudioEsQueue.size() > 0) {
+        audioBuffer = mAudioEsQueue.front();
+        mAudioEsQueue.pop();
+        mPlayer->notifyListener(AML_MP_PLAYER_EVENT_AUDIO_INPUT_BUFFER_DONE, (int64_t)audioBuffer.addr);
+    }
+}
+
+void AmlTsPlayer::AudioEsDataFeedThread::resume()
+{
+    std::unique_lock<std::mutex> _l(mLock);
+    mPaused = false;
+}
+void AmlTsPlayer::AudioEsDataFeedThread::stop()
+{
+    flush();
+    requestExitAndWait();
+}
+
+bool AmlTsPlayer::AudioEsDataFeedThread::threadLoop() {
+    while (!exitPending()) {
+        struct AudioEsBuffer audioBuffer;
+        bool hasData = false;
+        {
+            std::unique_lock<std::mutex> _l(mLock);
+            if (!mPaused && mAudioEsQueue.size() > 0) {
+                audioBuffer = mAudioEsQueue.front();
+                hasData = true;
+            }
+        }
+        if (hasData) {
+            int ret = mPlayer->writeEsData_l(AML_MP_STREAM_TYPE_AUDIO, audioBuffer.addr, audioBuffer.size, audioBuffer.pts);
+            if (ret >= 0) {
+                {
+                    std::unique_lock<std::mutex> _l(mLock);
+                    mAudioEsQueue.pop();
+                }
+                mPlayer->notifyListener(AML_MP_PLAYER_EVENT_AUDIO_INPUT_BUFFER_DONE, (int64_t)audioBuffer.addr);
+            }
+        }
+        usleep(1000); // todo, should use condition variable
+    }
+    return false;
+}
+
 AmlTsPlayer::AmlTsPlayer(Aml_MP_PlayerCreateParams* createParams, int instanceId)
 : aml_mp::AmlPlayerBase(createParams, instanceId)
 {
@@ -175,7 +246,6 @@ int AmlTsPlayer::setAudioParams(const Aml_MP_AudioParams* params) {
 
 int AmlTsPlayer::start() {
     int ret = 0;
-
     MLOGI("Call start");
     if (mVideoParaSeted)
         ret += startVideoDecoding();
@@ -289,6 +359,17 @@ int AmlTsPlayer::writeData(const uint8_t* buffer, size_t size) {
 }
 
 int AmlTsPlayer::writeEsData(Aml_MP_StreamType type, const uint8_t* buffer, size_t size, int64_t pts)
+{
+    int ret = -1;
+    if (type == AML_MP_STREAM_TYPE_AUDIO && mAudioEsDataFeedThread) {
+        ret = mAudioEsDataFeedThread->writeEsData(buffer, size, pts);
+    } else {
+        ret = writeEsData_l(type, buffer, size, pts);
+    }
+    return ret;
+}
+
+int AmlTsPlayer::writeEsData_l(Aml_MP_StreamType type, const uint8_t* buffer, size_t size, int64_t pts)
 {
 #ifdef HAVE_PACKETIZE_ESTOTS
     sptr<AmlMpBuffer> tsPackets;
@@ -1016,9 +1097,12 @@ int AmlTsPlayer::resumeVideoDecoding() {
 
 int AmlTsPlayer::startAudioDecoding() {
     am_tsplayer_result ret = AM_TSPLAYER_ERROR_INVALID_PARAMS;
-
     ret = AmTsPlayer_startAudioDecoding(mPlayer);
 
+    if (!mAudioEsDataFeedThread) {
+        mAudioEsDataFeedThread = new AudioEsDataFeedThread(this);
+        mAudioEsDataFeedThread->start();
+    }
     if (ret != AM_TSPLAYER_OK) {
         return -1;
     }
@@ -1027,6 +1111,11 @@ int AmlTsPlayer::startAudioDecoding() {
 
 int AmlTsPlayer::stopAudioDecoding() {
     am_tsplayer_result ret = AM_TSPLAYER_ERROR_INVALID_PARAMS;
+
+    if (mAudioEsDataFeedThread) {
+        mAudioEsDataFeedThread->stop();
+        mAudioEsDataFeedThread.clear();
+    }
 
     ret = AmTsPlayer_stopAudioDecoding(mPlayer);
 
@@ -1062,7 +1151,9 @@ int AmlTsPlayer::stopADDecoding()
 
 int AmlTsPlayer::pauseAudioDecoding() {
     am_tsplayer_result ret = AM_TSPLAYER_ERROR_INVALID_PARAMS;
-
+    if (mAudioEsDataFeedThread) {
+        mAudioEsDataFeedThread->pause();
+    }
     ret = AmTsPlayer_pauseAudioDecoding(mPlayer);
 
     if (ret != AM_TSPLAYER_OK) {
@@ -1075,6 +1166,9 @@ int AmlTsPlayer::resumeAudioDecoding() {
     am_tsplayer_result ret = AM_TSPLAYER_ERROR_INVALID_PARAMS;
 
     ret = AmTsPlayer_resumeAudioDecoding(mPlayer);
+    if (mAudioEsDataFeedThread) {
+        mAudioEsDataFeedThread->resume();
+    }
 
     if (ret != AM_TSPLAYER_OK) {
         return -1;
