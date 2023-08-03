@@ -28,6 +28,20 @@ typedef Aml_MP_AVSyncSource Aml_MP_MediaPlayerAVSyncSource;
 typedef Aml_MP_PlayerEventType Aml_MP_MediaPlayerEventType;
 typedef void (*Aml_MP_MediaPlayerEventCallback)(void* userData, Aml_MP_MediaPlayerEventType event, int64_t param);
 
+///////////////////////////////////////////////////////////////////////////////
+typedef enum {
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_UNKNOWN = -1,
+
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_BAD_REQUEST = 0x1000,  //400 Bad Request
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_UNAUTHORIZED,          //401 Unauthorized
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_FORBIDDEN,             //403 Forbidden
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_NOT_FOUND,             //404 Not Found
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_OTHER_4XX,             //Other 4xx status codes
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_SERVER_ERROR,          //5xx status codes (Server Error)
+
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_ENOENT      = 0x2000,  //No such file or directory
+    AML_MP_MEDIAPLAYER_MEDIA_ERROR_ETIMEDOUT,             //Timed out
+} Aml_MP_MediaPlayerMediaErrorType;
 
 ///////////////////////////////////////////////////////////////////////////////
 #define AML_MP_MAX_STREAM_PARAMETER_SIZE 64
@@ -433,6 +447,15 @@ int Aml_MP_MediaPlayer_HideVideo(AML_MP_MEDIAPLAYER handle);
  */
 int Aml_MP_MediaPlayer_SetAVSyncSource(AML_MP_MEDIAPLAYER handle, Aml_MP_MediaPlayerAVSyncSource syncSource);
 
+/**
+ * \brief Aml_MP_MediaPlayer_SetLooping
+ *
+ * \param [in] player handle
+ * \param [in] loop
+ *
+ * \return
+ */
+int Aml_MP_MediaPlayer_SetLooping(AML_MP_MEDIAPLAYER handle, int loop);
 
 #ifdef __cplusplus
 }

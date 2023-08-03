@@ -268,3 +268,11 @@ int Aml_MP_MediaPlayer_SetPlaybackRate(AML_MP_MEDIAPLAYER handle, float rate)
     return player->setPlaybackRate(rate);
 }
 
+int Aml_MP_MediaPlayer_SetLooping(AML_MP_MEDIAPLAYER handle, int loop)
+{
+    sptr<AmlMpMediaPlayerImpl> player = aml_handle_cast<AmlMpMediaPlayerImpl>(handle);
+    RETURN_IF(-1, player == nullptr);
+
+    return player->setLooping(loop);
+}
+

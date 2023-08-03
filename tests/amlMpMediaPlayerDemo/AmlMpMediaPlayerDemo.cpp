@@ -60,6 +60,7 @@ static int isUrlValid(const std::string url, std::string& urlHead, std::string& 
 static int startingPlayCheck();
 
 //callback func
+static const char* mediaPlayerMediaErrorType2Str(Aml_MP_MediaPlayerMediaErrorType type);
 void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t param);
 
 //info
@@ -115,6 +116,9 @@ static bool AMMP_DEBUG_MODE_ENABLE = false;
 #define MEDIAPLAYERDEMO_MAIN (0)
 #define MEDIAPLAYERDEMO_PIP (1)
 
+#define ENUM_TO_STR(e) case e: return TO_STR(e); break
+#define TO_STR(v) #v
+
 ///////////////////////////////////////////////////////////////////////////////
 //Argument
 struct Argument
@@ -128,6 +132,8 @@ struct Argument
     bool onlyVideo = false;
     bool onlyAudio = false;
     int tunnelId = -1;
+    int loopMode = 0;
+    bool noSignalHandler = 0;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -158,6 +164,8 @@ struct playerRoster
         mPlayerArgument[id].onlyVideo       = argument->onlyVideo;
         mPlayerArgument[id].onlyAudio       = argument->onlyAudio;
         mPlayerArgument[id].tunnelId        = argument->tunnelId;
+        mPlayerArgument[id].loopMode        = argument->loopMode;
+        mPlayerArgument[id].noSignalHandler = argument->noSignalHandler;
 
         mPlayerPlayerDemo[id] = const_cast<struct AmlMpMediaPlayerDemo*>(demo);
 
@@ -185,6 +193,8 @@ struct playerRoster
         mPlayerArgument[id].onlyVideo       = argument->onlyVideo;
         mPlayerArgument[id].onlyAudio       = argument->onlyAudio;
         mPlayerArgument[id].tunnelId        = argument->tunnelId;
+        mPlayerArgument[id].loopMode        = argument->loopMode;
+        mPlayerArgument[id].noSignalHandler = argument->noSignalHandler;
         mLock.unlock();
 
         return id;
@@ -213,7 +223,7 @@ struct playerRoster
         for (size_t i = 0; i < MaxPlayerNum; ++i) {
             if (player == mPlayers[i]) {
                 mPlayers[i] = NULL;
-                memset(&mPlayerArgument[i], 0, sizeof(struct Argument));
+                //memset(&mPlayerArgument[i], 0, sizeof(struct Argument));
                 mPlayerPlayerDemo[i] = NULL;
 
                 if (mPlayerHandlerCount > 0) {
@@ -316,6 +326,8 @@ private:
             mPlayerArgument[i].onlyVideo       = false;
             mPlayerArgument[i].onlyAudio       = false;
             mPlayerArgument[i].tunnelId        = -1;
+            mPlayerArgument[i].loopMode        = 0;
+            mPlayerArgument[i].noSignalHandler = 0;
             mPlayerPlayerDemo[i] = NULL;
 
             mPlayerHandlerCount = 0;
@@ -471,9 +483,9 @@ struct AmlMpMediaPlayerDemo : public TestModule
         int fetchAndProcessCommands();
         virtual void* getCommandHandle() const;
         void setCommandHandle(void * handle);
-        void waitPreparedEvent();
-        void broadcast();
-        int installSignalHandler();
+        int waitPreparedEvent();
+        void broadcast(bool result);
+        static int installSignalHandler();
 
 public:
         bool mQuitPending = false;
@@ -483,6 +495,7 @@ private:
         AML_MP_MEDIAPLAYER mPlayer = NULL;
         std::condition_variable mCondition;
         std::mutex mMutex;
+        bool mPrepared = false;
 
 protected:
         const TestModule::Command* getCommandTable() const;
@@ -497,8 +510,10 @@ private:
 
 private:
         sptr<CommandProcessor> mCommandProcessor;
-        std::thread mSignalHandleThread;
+        static std::thread mSignalHandleThread;
 };
+
+std::thread AmlMpMediaPlayerDemo::mSignalHandleThread;
 
 AmlMpMediaPlayerDemo::AmlMpMediaPlayerDemo(int id)
     : mId(id)
@@ -535,6 +550,12 @@ bool AmlMpMediaPlayerDemo::processCommand(const std::vector<std::string>& args)
         MLOGI("%s,%d set mQuitPending = true", __FUNCTION__, __LINE__);
         //mQuitPending = true;
 
+        Argument* argument = nullptr;
+        playerRoster::instance().getPlayerArgument(MEDIAPLAYERDEMO_MAIN, &argument);
+        if (argument && argument->loopMode) {
+            TERMINAL_DEBUG("q command, reset loop mode!\n");
+            argument->loopMode = 0;
+        }
         closeAllMultiPlayback();
     } else {
         if (isRewindOrForward && (RewindOrForward != cmd || (cmd.compare("<") && cmd.compare(">")))) {
@@ -1241,18 +1262,22 @@ void AmlMpMediaPlayerDemo::setCommandHandle(void * handle)
         mPlayer = handle;
 }
 
-void AmlMpMediaPlayerDemo::waitPreparedEvent()
+int AmlMpMediaPlayerDemo::waitPreparedEvent()
 {
     printf("waitPreparedEvent \n");
 
     std::unique_lock<std::mutex> autoLock(mMutex);
     mCondition.wait(autoLock);
+    printf("waitPreparedEvent mPrepared:%d\n", mPrepared);
+
+    return (mPrepared == true ? 0 : -1);
 }
 
-void AmlMpMediaPlayerDemo::broadcast()
+void AmlMpMediaPlayerDemo::broadcast(bool result)
 {
-    printf("broadcast \n");
+    printf("broadcast result:%d\n", result);
     std::unique_lock<std::mutex> autoLock(mMutex);
+    mPrepared = result;
     mCondition.notify_all();
 }
 
@@ -1269,7 +1294,7 @@ int AmlMpMediaPlayerDemo::installSignalHandler()
         return -1;
     }
 
-    mSignalHandleThread = std::thread([blockSet, oldMask, this] {
+    mSignalHandleThread = std::thread([blockSet, oldMask] {
         int signo;
         int err;
 
@@ -1287,7 +1312,14 @@ int AmlMpMediaPlayerDemo::installSignalHandler()
             {
                 //quit
                 //mQuitPending = true;
+                Argument* argument = nullptr;
+                playerRoster::instance().getPlayerArgument(MEDIAPLAYERDEMO_MAIN, &argument);
+                if (argument && argument->loopMode) {
+                    TERMINAL_DEBUG("reset loop mode!\n");
+                    argument->loopMode = 0;
+                }
                 closeAllMultiPlayback();
+
             }
             break;
 
@@ -1514,18 +1546,16 @@ static int multiPlaybackThread(int id, bool isMain)
         return ret;
     }
 
-    AmlMpMediaPlayerDemo* commandsProcess = new AmlMpMediaPlayerDemo(id);
-    if (NULL == commandsProcess) {
+    sptr<AmlMpMediaPlayerDemo> commandsProcess = new AmlMpMediaPlayerDemo(id);
+    if (commandsProcess == NULL) {
         return ret;
     }
 
-    if (isMain) {
-        commandsProcess->installSignalHandler();
-    }
-
     //create
-    ret = createMultiPlayback(id, &player, argument, commandsProcess);
-    playerRoster::instance().registerAll(player, id, argument, commandsProcess);//register player/commandsProcess
+    ret = createMultiPlayback(id, &player, argument, commandsProcess.get());
+    if (ret < 0) {
+        goto error;
+    }
 
     if (isMain) {
         //commands process
@@ -1540,26 +1570,28 @@ static int multiPlaybackThread(int id, bool isMain)
         } while (commandsProcess->mQuitPending == false);
     }
 
+error:
     //destroy
     ret = destroyMultiPlayback(id);
 
-    if (commandsProcess) {
-        delete commandsProcess;
-        commandsProcess = NULL;
-    }
-
     printf("\nAmlMpMediaPlayerDemo:%d ----------play exited!\n", id);
+
     return ret;
 }
 
 static int createMultiPlayback(int id, AML_MP_MEDIAPLAYER* player, struct Argument* argument, AmlMpMediaPlayerDemo* commandsProcess)
 {
+    int ret = -1;
+
     if (argument == NULL) {
         return -1;
     }
 
     //create
     Aml_MP_MediaPlayer_Create(player);
+
+    //prre-registration
+    playerRoster::instance().registerAll(*player, id, argument, commandsProcess);//register player/commandsProcess
 
     //only settings
     // channelid is used for pip function which start the demo in a different process.
@@ -1572,6 +1604,10 @@ static int createMultiPlayback(int id, AML_MP_MEDIAPLAYER* player, struct Argume
     if (argument->onlyAudio)
         type = AML_MP_MEDIAPLAYER_AUDIO_ONLYHIT;
     Aml_MP_MediaPlayer_SetParameter(*player, AML_MP_MEDIAPLAYER_PARAMETER_ONLYHINT_TYPE, (void*)&type);
+
+    if (argument->loopMode == 2) {
+        Aml_MP_MediaPlayer_SetLooping(*player, argument->loopMode);
+    }
 
     //setdatasource
     Aml_MP_MediaPlayer_SetDataSource(*player, argument->url.c_str());
@@ -1587,7 +1623,10 @@ static int createMultiPlayback(int id, AML_MP_MEDIAPLAYER* player, struct Argume
 
     //prepare
     Aml_MP_MediaPlayer_PrepareAsync(*player);
-    commandsProcess->waitPreparedEvent();
+    ret = commandsProcess->waitPreparedEvent();
+    if (ret < 0) {
+        return ret;
+    }
 
     int iD = argument->tunnelId == -1 ? 0 : argument->tunnelId;
     Aml_MP_MediaPlayer_SetParameter(*player, AML_MP_MEDIAPLAYER_PARAMETER_VIDEO_TUNNEL_ID, (void*)(&iD));
@@ -1749,6 +1788,8 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
         {"onlyVideo",   no_argument,        nullptr, 'V'},
         {"onlyAudio",   no_argument,        nullptr, 'A'},
         {"id",          required_argument,  nullptr, 't'},
+        {"loopMode",    required_argument,  nullptr, 'L'},
+        {"noSignalHandler", no_argument,    nullptr, 'S'},
         {nullptr,       no_argument,        nullptr, 0},
     };
 
@@ -1814,6 +1855,19 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
             argument->tunnelId = tunnelId;
         }
         break;
+        case 'L':
+        {
+            int loopMode = strtol(optarg, nullptr, 0);
+            printf("loop mode:%d\n", loopMode);
+            argument->loopMode = loopMode;
+        }
+        break;
+        case 'S':
+        {
+            printf("no signal handler will be installed!\n");
+            argument->noSignalHandler = true;
+        }
+        break;
 
         case 'h':
         default:
@@ -1830,6 +1884,23 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
     return 0;
 }
 
+static const char* mediaPlayerMediaErrorType2Str(Aml_MP_MediaPlayerMediaErrorType type)
+{
+    switch (type) {
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_UNKNOWN);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_BAD_REQUEST);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_UNAUTHORIZED);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_FORBIDDEN);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_NOT_FOUND);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_OTHER_4XX);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_HTTP_SERVER_ERROR);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_ENOENT);
+        ENUM_TO_STR(AML_MP_MEDIAPLAYER_MEDIA_ERROR_ETIMEDOUT);
+        default:
+            return "unknowmn media error type";
+    }
+}
+
 void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t param)
 {
     AmlMpMediaPlayerDemo* demo = (AmlMpMediaPlayerDemo*)(userData);
@@ -1838,14 +1909,29 @@ void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t par
         case AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE:
         {
             printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
+            closeMultiPlayback(demo->mId);
             break;
         }
         case AML_MP_MEDIAPLAYER_EVENT_PREPARED:
         {
             if (demo) {
-                demo->broadcast();
+                demo->broadcast(true);
             }
             printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_PREPARED, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
+            break;
+        }
+        case AML_MP_MEDIAPLAYER_EVENT_MEDIA_ERROR:
+        {
+            if (demo) {
+                demo->broadcast(false);
+            }
+            closeMultiPlayback(demo->mId);
+            printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_MEDIA_ERROR, id:%d, type:%s\n",__FUNCTION__,__LINE__, demo->mId, mediaPlayerMediaErrorType2Str(static_cast<Aml_MP_MediaPlayerMediaErrorType>(param)));
+            break;
+        }
+        case AML_MP_MEDIAPLAYER_EVENT_STOPPED:
+        {
+            printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_STOPPED, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
             break;
         }
         default:
@@ -1918,6 +2004,10 @@ static void showUsage()
             "    --id:         specify the corresponding ui channel id\n"
             "    --onlyVideo         \n"
             "    --onlyAudio         \n"
+            "   --loopMode <value>  \n"
+            "              1: wait play completed, then destroy player and recreate player\n"
+            "              2: seek to beginning internally when play completed\n"
+            "   --noSignalHandler       don't install signal handler\n"
             "\n"
             "url format:\n"
             "    clear ts, eg: dclr:http://10.28.8.30:8881/data/a.ts\n"
@@ -1928,6 +2018,10 @@ static void showUsage()
 
 int main(int argc, char *argv[])
 {
+    // support run in background
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+
     int ret = -1;
 
     if (startingPlayCheck() < 0) {
@@ -1950,9 +2044,25 @@ int main(int argc, char *argv[])
     }
 
     playerRoster::instance().registerPlayerArgument(MEDIAPLAYERDEMO_MAIN, &argument);//only register argument
+
+    if (!argument.noSignalHandler) {
+        AmlMpMediaPlayerDemo::installSignalHandler();
+    }
+    int loopCount = 0;
+begin:
     ret = multiPlaybackThread(MEDIAPLAYERDEMO_MAIN, true/*isMain*/);
     if (ret < 0) {
         printf("\n multiPlaybackThread id:%d error\n", (int)MEDIAPLAYERDEMO_MAIN);
+    }
+
+    {
+        ++loopCount;
+        Argument* argument = nullptr;
+        playerRoster::instance().getPlayerArgument(MEDIAPLAYERDEMO_MAIN, &argument);
+        if (argument && argument->loopMode == 1) {
+            printf("loop play count:%d\n", loopCount);
+            goto begin;
+        }
     }
 
 

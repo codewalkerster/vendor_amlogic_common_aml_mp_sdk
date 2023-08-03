@@ -795,6 +795,22 @@ int AmlMpMediaPlayerImpl::setPlaybackRate_l(float rate)
     return mPlayer->setPlaybackRate(rate);
 }
 
+int AmlMpMediaPlayerImpl::setLooping(int loop)
+{
+    AML_MP_TRACE(10);
+    std::unique_lock<std::mutex> _l(mLock);
+    MLOG();
+
+    return setLooping_l(loop);
+}
+
+int AmlMpMediaPlayerImpl::setLooping_l(int loop)
+{
+    RETURN_IF(-1, mPlayer == nullptr);
+
+    return mPlayer->setLooping(loop);
+}
+
 ///////////////////////////////////////////////////////////////
 const char* AmlMpMediaPlayerImpl::stateString(State state)
 {

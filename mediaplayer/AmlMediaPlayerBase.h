@@ -91,6 +91,7 @@ public:
     virtual int getParameter(Aml_MP_MediaPlayerParameterKey key, void* parameter) = 0;
     virtual bool isPlaying() = 0;
     virtual int setPlaybackRate(float rate) = 0;
+    virtual int setLooping(int loop) = 0;
 
 protected:
     void notifyListener(Aml_MP_MediaPlayerEventType eventType, int64_t param);

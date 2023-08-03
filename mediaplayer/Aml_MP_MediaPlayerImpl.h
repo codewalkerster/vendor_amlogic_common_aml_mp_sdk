@@ -77,6 +77,7 @@ public:
     bool isPlaying();
     int registerEventCallBack(Aml_MP_MediaPlayerEventCallback cb, void* userData);
     int setPlaybackRate(float rate);
+    int setLooping(int loop);
 
 private:
     enum State {
@@ -125,6 +126,7 @@ private:
     bool isPlaying_l();
     void notifyListener(Aml_MP_MediaPlayerEventType eventType, int64_t param);
     int setPlaybackRate_l(float rate);
+    int setLooping_l(int loop);
 
     const char* stateString(State state);
     void setState_l(State state);
