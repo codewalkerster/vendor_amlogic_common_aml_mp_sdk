@@ -111,7 +111,7 @@ AmlDvbCasHal::AmlDvbCasHal(Aml_MP_CASServiceType serviceType)
         return;
     }
 
-    MLOG("openSession:%#zx", mCasSession);
+    MLOG("openSession:%#zx, MAX_CHAN_COUNT=%d", mCasSession, MAX_CHAN_COUNT);
 
     std::unique_lock<std::mutex> _l(sCasHalSessionLock);
     auto result = sCasHalSessionMap.emplace(mCasSession, this);
@@ -166,6 +166,8 @@ int AmlDvbCasHal::startDescrambling(Aml_MP_CASServiceInfo* serviceInfo)
 #ifdef HAVE_CAS_HAL
     AM_CA_ServiceInfo_t caServiceInfo;
     convertToCAServiceInfo(&caServiceInfo, serviceInfo);
+
+    MLOG("startDescrambling: caServiceInfo->stream_num=%d", caServiceInfo.stream_num);
 
     ret = convertToAmlMPErrorCode(AM_CA_StartDescrambling(mCasSession, &caServiceInfo));
 #else

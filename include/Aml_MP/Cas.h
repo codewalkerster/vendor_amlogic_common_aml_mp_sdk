@@ -12,7 +12,7 @@
 
 #include "Common.h"
 
-#define MAX_CHAN_COUNT (8)
+#define MAX_CHAN_COUNT (32)
 #define MAX_DATA_LEN (8)
 
 /**\brief Service Mode of the program*/
