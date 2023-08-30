@@ -638,6 +638,7 @@ void BufferQueue::getFlowStatus(bool* underflow, bool* overflow)
 BufferQueue::Consumer::Consumer(Aml_MP_StreamType streamType, const std::string& name)
 : mStreamType(streamType)
 {
+    snprintf(mName, sizeof(mName), "%s_%s", LOG_TAG, name.c_str());
     snprintf(mConsumerName, sizeof(mConsumerName), "%s", name.c_str());
     MLOG();
 
@@ -740,7 +741,7 @@ int BufferQueue::Consumer::pause()
         mBufferQueue->stopReceive();
     }
 
-    sendWorkCommand(kWorkPause);
+    sendWorkCommandAndWait(kWorkPause);
     MLOGI("BufferQueue pause end.");
 
     return 0;

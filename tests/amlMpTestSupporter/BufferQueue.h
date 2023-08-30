@@ -231,6 +231,7 @@ private:
 
     Aml_MP_StreamType mStreamType;
     char mConsumerName[40];
+    char mName[40];
 
     std::mutex mLock;
     std::condition_variable mCond;
