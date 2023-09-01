@@ -82,6 +82,7 @@ int AmlVMXIptvCas_V2::stopDescrambling()
 
     if (pIptvCas) {
         ret = pIptvCas->closeSession(&sessionId[0]);
+        ret = pIptvCas->releaseAmCas();
         pIptvCas.clear();
     }
 

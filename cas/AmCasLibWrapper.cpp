@@ -47,7 +47,13 @@ AmCasLibWrapper<ServiceType>::~AmCasLibWrapper()
     MLOG();
     if (mCasObj) {
         //CHECK: hasn't call destructor;
-        free(mCasObj);
+        //if vmx destruct mCasObj, we just set mCasObj to null
+        //else free the mem
+        if (!sCasSymbols.releaseAmCas) {
+            free(mCasObj);
+        } else {
+            mCasObj = nullptr;
+        }
         MLOGI("delete mCasObj");
     }
 }
@@ -234,6 +240,7 @@ void AmCasLibWrapper<ServiceType>::loadLib(const char *libName)
     sCasSymbols.closeSession = lookupSymbol<closeSessionFunc>("closeSession");
     sCasSymbols.releaseAll = lookupSymbol<releaseAllFunc>("releaseAll");
     sCasSymbols.selectTrack = lookupSymbol<selectTrackFunc>("selectTrack");
+    sCasSymbols.releaseAmCas = lookupSymbol<releaseAmCasFunc>("releaseAmCas");
 }
 
 template <Aml_MP_CASServiceType ServiceType>
@@ -249,6 +256,21 @@ AmCasCode_t AmCasLibWrapper<ServiceType>::releaseAll()
     }
     return AM_CAS_SUCCESS;
 }
+
+template <Aml_MP_CASServiceType ServiceType>
+AmCasCode_t AmCasLibWrapper<ServiceType>::releaseAmCas()
+{
+    if (!sCasSymbols.releaseAmCas) {
+        return AM_CAS_ERROR;
+    }
+    AmCasStatus_t ret = sCasSymbols.releaseAmCas(mCasObj);
+    if (ret != CAS_STATUS_OK) {
+        ALOGE("releaseAmCas failed");
+        return AM_CAS_ERROR;
+    }
+    return AM_CAS_SUCCESS;
+}
+
 
 template <Aml_MP_CASServiceType ServiceType>
 void AmCasLibWrapper<ServiceType>::releaseLib()

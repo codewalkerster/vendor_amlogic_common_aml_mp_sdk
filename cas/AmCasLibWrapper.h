@@ -71,6 +71,7 @@ public:
     AmCasCode_t decrypt(uint8_t *in, uint8_t *out, int size, void *ext_data);
     AmCasCode_t selectTrack(int trackType,int trackPid,int trackFormat);
     AmCasCode_t releaseAll();
+    AmCasCode_t releaseAmCas();
     uint8_t* getOutbuffer();
     //CasStreamInfo mCasStreamInfo;
 
@@ -94,6 +95,7 @@ private:
     typedef AmCasStatus_t (*releaseAllFunc)(void *casObj);
     typedef uint8_t* (*getOutbufferFunc)(void *casObj);
     typedef AmCasStatus_t (*selectTrackFunc)(void *casObj, int trackType, int trackPid, int trackFormat);
+    typedef AmCasStatus_t (*releaseAmCasFunc)(void *casObj);
 
     struct CasSymbols
     {
@@ -111,6 +113,7 @@ private:
         releaseAllFunc releaseAll;
         getOutbufferFunc getOutbuffer;
         selectTrackFunc selectTrack;
+        releaseAmCasFunc releaseAmCas;
     };
     static CasSymbols sCasSymbols;
     static void* sCasHandle;
