@@ -39,7 +39,7 @@ private:
     int mFirstEcm;
     uint8_t mEcmTsPacket[188];
 
-    int setDscSource();
+    int setDscSource(const char* source);
     int dscDevOpen(const char *port_addr, int flags);
     int checkEcmProcess(uint8_t* pBuffer, uint32_t vEcmPid, uint32_t aEcmPid, size_t * nSize);
 

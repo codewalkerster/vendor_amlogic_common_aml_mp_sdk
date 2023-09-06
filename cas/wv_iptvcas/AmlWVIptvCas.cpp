@@ -294,21 +294,6 @@ int AmlWVIptvCas::setDscSource()
         if (ret)
             MLOGI("Error ret 0x%x\n", ret);
     }
-    else
-    {
-       /*
-        if (parm.source == TS_MEMORY)
-            ret = stb_set_tsn_source(TSN_IPTV);
-        else if (parm.source == TS_DEMOD)
-            ret = stb_set_tsn_source(TSN_DVB);
-        */
-        //widevine cas plugin have do it
-        /*ret = amsysfs_set_sysfs_str(TSN_PATH, TSN_IPTV);
-        if (ret) {
-            MLOGI("hw multi demux Error ret 0x%x\n", ret);
-        }
-        */
-    }
 #endif
     return convertToAmlMPErrorCode((AmCasCode_t)ret);
 }

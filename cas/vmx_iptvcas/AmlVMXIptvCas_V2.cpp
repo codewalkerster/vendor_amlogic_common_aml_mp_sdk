@@ -259,12 +259,6 @@ int AmlVMXIptvCas_V2::setDscSource(const char* source)
     }
     else
     {
-       /*
-        if (parm.source == TS_MEMORY)
-            ret = stb_set_tsn_source(TSN_IPTV);
-        else if (parm.source == TS_DEMOD)
-            ret = stb_set_tsn_source(TSN_DVB);
-        */
         ret = amsysfs_set_sysfs_str(TSN_PATH, source);
         if (ret)
             MLOGI("hw multi demux Error ret 0x%x\n", ret);

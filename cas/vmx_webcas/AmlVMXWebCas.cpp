@@ -62,7 +62,7 @@ int AmlVMXWebCas::startDescrambling(const Aml_MP_IptvCASParams* params)
     ret = pIptvCas->provision();
 
     if (pIptvCas) {
-        setDscSource();
+        setDscSource(TSN_IPTV);
         MLOGI("%s, vpid=0x%x, apid=0x%x", __func__, mIptvCasParam.videoPid, mIptvCasParam.audioPid);
         pIptvCas->setPids(mIptvCasParam.videoPid, mIptvCasParam.audioPid);
         ret = pIptvCas->openSession(&sessionId[0]);
@@ -75,6 +75,8 @@ int AmlVMXWebCas::stopDescrambling()
 {
     MLOGI("closeSession");
     int ret = 0;
+
+    setDscSource(TSN_DVB);
 
     if (pIptvCas) {
         ret = pIptvCas->closeSession(&sessionId[0]);
@@ -162,7 +164,7 @@ retry_open:
 }
 
 
-int AmlVMXWebCas::setDscSource()
+int AmlVMXWebCas::setDscSource(const char* source)
 {
     int ret = 0;
     bool use_hw_multi_demux = false;
@@ -185,13 +187,7 @@ int AmlVMXWebCas::setDscSource()
     }
     else
     {
-       /*
-        if (parm.source == TS_MEMORY)
-            ret = stb_set_tsn_source(TSN_IPTV);
-        else if (parm.source == TS_DEMOD)
-            ret = stb_set_tsn_source(TSN_DVB);
-        */
-        ret = amsysfs_set_sysfs_str(TSN_PATH, TSN_IPTV);
+        ret = amsysfs_set_sysfs_str(TSN_PATH, source);
         if (ret)
             MLOGI("hw multi demux Error ret 0x%x\n", ret);
     }
