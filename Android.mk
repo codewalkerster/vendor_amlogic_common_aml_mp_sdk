@@ -36,6 +36,9 @@ AML_MP_PLAYER_SRC := \
 	player/AmlTsPlayer.cpp \
 	player/AmlCTCPlayer.cpp \
 	player/AmlDummyTsPlayer.cpp \
+	mediaplayer/Aml_MP_MediaPlayer.cpp \
+	mediaplayer/Aml_MP_MediaPlayerImpl.cpp \
+	mediaplayer/AmlMediaPlayerBase.cpp \
 
 #AML_MP_PLAYER_SYSTEM_SRC_29 := \
 	player/AmlCTCPlayer.cpp \
@@ -217,6 +220,7 @@ endif
 
 AML_MP_VENDOR_CFLAGS_ge_30 := \
 	-DHAVE_SUBTITLE \
+	-DHAVE_AMUMEDIA
 
 ifeq ($(HAVE_CAS_HAL), true)
 AML_MP_VENDOR_CFLAGS_ge_30 += \

@@ -30,22 +30,29 @@ AmlMediaPlayer_Ops::~AmlMediaPlayer_Ops() {
 
 int AmlMediaPlayer_Ops::initAmlMediaPlayerLib(Aml_MP_MediaPlayerCreateParams* createParams)
 {
-    int err = -1;
+    AML_MP_UNUSED(createParams);
 
+    int err = -1;
     if (isInit) {
         MLOGI("AmlMediaPlayer_Ops has inited\n");
         return 0;
     }
 
 #ifdef HAVE_AMUMEDIA
+    const char* iptv_lib;
     if (libHandle == NULL) {
-        libHandle = dlopen("libAmIptvMedia.so", RTLD_NOW);
+#ifdef __ANDROID_VNDK__
+        iptv_lib = "libAmIptvMedia.vendor.so";
+#else
+        iptv_lib = "libAmIptvMedia.so";
+#endif
+        libHandle = dlopen(iptv_lib, RTLD_NOW);
         if (libHandle == NULL) {
-                MLOGE("unable to dlopen libAmIptvMedia.so: %s", dlerror());
+                MLOGE("unable to dlopen %s: %s", iptv_lib, dlerror());
                 return err;
         }
     }
-    MLOGI("dlopen libAmIptvMedia ok\n");
+    MLOGI("dlopen %s ok\n", iptv_lib);
 #else
     if (libHandle == NULL) {
         libHandle = dlopen("libdrmp.so", RTLD_NOW);
@@ -105,7 +112,8 @@ AmlMediaPlayerBase* AmlMediaPlayerBase::create(Aml_MP_MediaPlayerCreateParams* c
 AmlMediaPlayerBase::AmlMediaPlayerBase(Aml_MP_MediaPlayerCreateParams* createParams, int instanceId)
     : mEventCb(NULL), mUserData(NULL)
 {
-    ;
+    AML_MP_UNUSED(createParams);
+    AML_MP_UNUSED(instanceId);
 }
 
 AmlMediaPlayerBase::~AmlMediaPlayerBase()

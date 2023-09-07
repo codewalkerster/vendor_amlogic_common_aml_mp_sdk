@@ -127,6 +127,7 @@ struct Argument
     int channelId = -1;
     bool onlyVideo = false;
     bool onlyAudio = false;
+    int tunnelId = -1;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,6 +157,7 @@ struct playerRoster
         mPlayerArgument[id].channelId       = argument->channelId;
         mPlayerArgument[id].onlyVideo       = argument->onlyVideo;
         mPlayerArgument[id].onlyAudio       = argument->onlyAudio;
+        mPlayerArgument[id].tunnelId        = argument->tunnelId;
 
         mPlayerPlayerDemo[id] = const_cast<struct AmlMpMediaPlayerDemo*>(demo);
 
@@ -182,6 +184,7 @@ struct playerRoster
         mPlayerArgument[id].channelId       = argument->channelId;
         mPlayerArgument[id].onlyVideo       = argument->onlyVideo;
         mPlayerArgument[id].onlyAudio       = argument->onlyAudio;
+        mPlayerArgument[id].tunnelId        = argument->tunnelId;
         mLock.unlock();
 
         return id;
@@ -312,6 +315,7 @@ private:
             mPlayerArgument[i].channelId       = -1;
             mPlayerArgument[i].onlyVideo       = false;
             mPlayerArgument[i].onlyAudio       = false;
+            mPlayerArgument[i].tunnelId        = -1;
             mPlayerPlayerDemo[i] = NULL;
 
             mPlayerHandlerCount = 0;
@@ -1125,6 +1129,7 @@ exit:
             argument.viewWidth = 960;
             argument.viewHeight = 540;
             argument.channelId = MEDIAPLAYERDEMO_PIP;//maybe need demux=1
+            argument.tunnelId = 1;
             argument.onlyVideo = false;
             argument.onlyAudio = false;
 
@@ -1584,12 +1589,8 @@ static int createMultiPlayback(int id, AML_MP_MEDIAPLAYER* player, struct Argume
     Aml_MP_MediaPlayer_PrepareAsync(*player);
     commandsProcess->waitPreparedEvent();
 
-#ifndef ANDROID
-    //set videotunnel id = 0 on yocto
-    //must before prepare
-    int iD = argument->channelId == -1 ? 0 : argument->channelId;
+    int iD = argument->tunnelId == -1 ? 0 : argument->tunnelId;
     Aml_MP_MediaPlayer_SetParameter(*player, AML_MP_MEDIAPLAYER_PARAMETER_VIDEO_TUNNEL_ID, (void*)(&iD));
-#endif
 
     //start
     Aml_MP_MediaPlayer_Start(*player);
@@ -1676,13 +1677,15 @@ static int isUrlValid(const std::string url, std::string& urlHead, std::string& 
     nwch-->nagra WEB Client HLS
     wcas-->widevine cas client
     ncas-->nagra cas client
+    icas-->irdeto cas client
     */
     else if (urlHead.compare("hclr") == 0 ||
             urlHead.compare("vstb") == 0 ||
             urlHead.compare("vwch") == 0 ||
             urlHead.compare("nwch") == 0 ||
             urlHead.compare("wcas") == 0 ||
-            urlHead.compare("ncas") == 0 ) {
+            urlHead.compare("ncas") == 0 ||
+            urlHead.compare("icas") == 0) {
         ret = 0;
     }
 
@@ -1695,6 +1698,7 @@ static int startingPlayCheck()
     int ret = 0;
     char errorInfo[50] = {0};
 
+#ifndef ANDROID
 #define YOCTO_libAmIptvMedia "/usr/lib/libAmIptvMedia.so"
     if (access(YOCTO_libAmIptvMedia, F_OK) != 0) {
         ret = -1;
@@ -1722,6 +1726,7 @@ static int startingPlayCheck()
         strcpy(errorInfo, YOCTO_libffmpeg_ctc);
         goto EXIT;
     }
+#endif
 
     return ret;
 
@@ -1743,6 +1748,7 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
         {"debug",       required_argument,  nullptr, 'd'},
         {"onlyVideo",   no_argument,        nullptr, 'V'},
         {"onlyAudio",   no_argument,        nullptr, 'A'},
+        {"id",          required_argument,  nullptr, 't'},
         {nullptr,       no_argument,        nullptr, 0},
     };
 
@@ -1799,6 +1805,13 @@ static int parseCommandArgs(int argc, char* argv[], Argument* argument)
         {
             argument->onlyAudio = true;
             printf("onlyAudio\n");
+        }
+        break;
+        case 't':
+        {
+            int tunnelId = strtol(optarg, nullptr, 0);
+            printf("tunnel id:%d\n", tunnelId);
+            argument->tunnelId = tunnelId;
         }
         break;
 
@@ -1902,6 +1915,7 @@ static void showUsage()
             "    --pos:        eg: 0x0\n"
             "    --debug:      eg: 1\n"
             "    --channelId:  eg: 0 main, others: pip\n"
+            "    --id:         specify the corresponding ui channel id\n"
             "    --onlyVideo         \n"
             "    --onlyAudio         \n"
             "\n"

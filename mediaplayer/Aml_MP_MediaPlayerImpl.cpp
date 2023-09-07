@@ -134,7 +134,11 @@ int AmlMpMediaPlayerImpl::setVideoWindow(int32_t x, int32_t y, int32_t width, in
         }
 
         transcation.setSize(mSurfaceControl, width, height);
+#if ANDROID_PLATFORM_SDK_VERSION >= 31
+        transcation.setCrop(mSurfaceControl, android::Rect(width, height));
+#elif ANDROID_PLATFORM_SDK_VERSION >= 29
         transcation.setCrop_legacy(mSurfaceControl, android::Rect(width, height));
+#endif
         transcation.setLayer(mSurfaceControl, mZorder);
 
         transcation.apply();
@@ -824,4 +828,4 @@ void AmlMpMediaPlayerImpl::setState_l(State state)
     }
 }
 
-}
+}
