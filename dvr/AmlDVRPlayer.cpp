@@ -516,6 +516,14 @@ DVR_Result_t AmlDVRPlayer::eventHandlerLibDVR(DVR_PlaybackEvent_t event, void* p
         if (mEventCb) mEventCb(mEventUserData, AML_MP_PLAYER_EVENT_FIRST_FRAME, (int64_t)&mpStatus);
         break;
 
+    case DVR_PLAYBACK_EVENT_TIMESHIFT_FR_REACHED_BEGIN:
+        if (mEventCb) mEventCb(mEventUserData, AML_MP_DVRPLAYER_EVENT_TIMESHIFT_FR_REACHED_BEGIN, (int64_t)&mpStatus);
+        break;
+
+    case DVR_PLAYBACK_EVENT_TIMESHIFT_FF_REACHED_END:
+        if (mEventCb) mEventCb(mEventUserData, AML_MP_DVRPLAYER_EVENT_TIMESHIFT_FF_REACHED_END, (int64_t)&mpStatus);
+        break;
+
     default:
         MLOG("unhandled event:%d", event);
         break;

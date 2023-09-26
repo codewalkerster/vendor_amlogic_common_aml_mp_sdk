@@ -806,6 +806,8 @@ typedef enum {
     AML_MP_DVRPLAYER_EVENT_REACHED_BEGIN,                   /**< reached begin*/
     AML_MP_DVRPLAYER_EVENT_REACHED_END,                     /**< reached end*/
     AML_MP_DVRPLAYER_EVENT_NOTIFY_PLAYTIME,                 /**< notify play cur segment time ms*/
+    AML_MP_DVRPLAYER_EVENT_TIMESHIFT_FR_REACHED_BEGIN = 0x100b,
+    AML_MP_DVRPLAYER_EVENT_TIMESHIFT_FF_REACHED_END,
 
     // Video event
     AML_MP_PLAYER_EVENT_VIDEO_BASE              = 0x2000,
