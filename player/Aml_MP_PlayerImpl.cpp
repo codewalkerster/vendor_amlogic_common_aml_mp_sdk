@@ -1027,12 +1027,7 @@ int AmlMpPlayerImpl::setParameter_l(Aml_MP_PlayerParameterKey key, void* paramet
     {
         RETURN_IF(-1, parameter == nullptr);
         Aml_MP_VideoDecodeMode decodeMode = *(Aml_MP_VideoDecodeMode*)parameter;
-        Aml_MP_AVSyncSource originalSyncSource = mSyncSource;
-        if (AML_MP_VIDEO_DECODE_MODE_NONE != decodeMode) {
-            mSyncSource = AML_MP_AVSYNC_SOURCE_NOSYNC;
-        }
         switchDecodeMode_l(decodeMode, lock);
-        mSyncSource = originalSyncSource;
         break;
     }
 
@@ -1811,7 +1806,15 @@ int AmlMpPlayerImpl::prepare_l()
         mSyncSource = AML_MP_AVSYNC_SOURCE_PCR;
     }
 
-    mPlayer->setAVSyncSource(mSyncSource);
+    Aml_MP_AVSyncSource tmpSyncSource = mSyncSource;
+#ifdef ANDROID
+    //If the middleware only calls the setparameter(decodeMode) interface during speed playback,
+    //we need to put tsplayerrender in freerun state
+    if (mVideoDecodeMode == AML_MP_VIDEO_DECODE_MODE_IONLY) {
+        tmpSyncSource = AML_MP_AVSYNC_SOURCE_NOSYNC;
+    }
+#endif
+    mPlayer->setAVSyncSource(tmpSyncSource);
 
     if (mSyncSource == AML_MP_AVSYNC_SOURCE_PCR && mPcrPid != AML_MP_INVALID_PID) {
         mPlayer->setPcrPid(mPcrPid);
@@ -2274,6 +2277,7 @@ void AmlMpPlayerImpl::resetVariables_l()
     mLastBytesWritten = 0;
     mLastWrittenTimeUs = 0;
     mAudioStoppedInSwitching = false;
+    mVideoDecodeMode = AML_MP_VIDEO_DECODE_MODE_NONE;
 
     resetDrmVariables_l();
 }
