@@ -497,9 +497,11 @@ int AmlMpTestSupporter::startDVRPlayback(bool isSetStreams, bool isTimeShift)
     if (mEventCallback != nullptr) {
         mDVRPlayback->registerEventCallback(mEventCallback, mUserData);
     }
+
+    createNativeUI();
+
 #ifdef ANDROID
 #ifndef __ANDROID_VNDK__
-    createNativeUI();
     sp<ANativeWindow> window = getSurfaceControl();
     if (window == nullptr) {
         MLOGE("create native window failed!");
@@ -514,6 +516,14 @@ int AmlMpTestSupporter::startDVRPlayback(bool isSetStreams, bool isTimeShift)
 
     mDVRPlayback->setParameter(AML_MP_PLAYER_PARAMETER_VIDEO_TUNNEL_ID, &mDisplayParam.channelId);
 #endif
+#else
+    if (mDisplayParam.channelId < 0) {
+        printf("Please specify the ui channel id by --id option, default set to 0 now!\n");
+        mDisplayParam.channelId = 0;
+    }
+    mDVRPlayback->setParameter(AML_MP_PLAYER_PARAMETER_VIDEO_TUNNEL_ID, &mDisplayParam.channelId);
+    mDVRPlayback->setVideoWindow(mDisplayParam.x, mDisplayParam.y, mDisplayParam.width, mDisplayParam.height);
+    MLOGI("x:%d y:%d width:%d height:%d\n", mDisplayParam.x, mDisplayParam.y, mDisplayParam.width, mDisplayParam.height);
 #endif
 
     if (isSetStreams) {

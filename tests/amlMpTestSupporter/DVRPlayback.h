@@ -31,6 +31,7 @@ public:
     int start(bool isSetStream = true);
     int stop();
     void signalQuit();
+    int setVideoWindow(int x, int y, int width, int height);
     int setParameter(Aml_MP_PlayerParameterKey key, void* parameter);
     int setStreams();
     int getMpPlayerHandle(AML_MP_PLAYER* handle);

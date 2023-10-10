@@ -69,6 +69,12 @@ void DVRPlayback::setANativeWindow(const android::sp<ANativeWindow>& window)
 }
 #endif
 
+int DVRPlayback::setVideoWindow(int x, int y, int width, int height)
+{
+    int ret = Aml_MP_DVRPlayer_SetVideoWindow(mPlayer, x, y, width, height);
+    return ret;
+}
+
 int DVRPlayback::setParameter(Aml_MP_PlayerParameterKey key, void* parameter)
 {
     int ret = Aml_MP_DVRPlayer_SetParameter(mPlayer, key, parameter);
