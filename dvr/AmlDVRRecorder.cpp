@@ -30,9 +30,13 @@ AmlDVRRecorder::AmlDVRRecorder(Aml_MP_DVRRecorderBasicParams* basicParams, Aml_M
     setBasicParams(basicParams);
 
     mIsEncryptStream = basicParams->flags & AML_MP_DVRRECORDER_SCRAMBLED;
-
+    mIsOutData = mRecOpenParams.flags & AML_MP_DVRRECORDER_DATAOUT;
     if (basicParams->isTimeShift) {
         setTimeShiftParams(timeShiftParams);
+    }
+
+    if (mIsOutData) {
+        setSharedParams(basicParams);
     }
 
     if (encryptParams != nullptr) {
@@ -194,6 +198,12 @@ int AmlDVRRecorder::start()
         return -1;
     }
 
+    if (mIsOutData) {
+        Segment_DataoutCallback_t share_cb = { mSharedCb, mSharedUserData};
+        MLOGI("DVRRecorder Start ioctl AML_MP_SEGMENT_DATAOUT_CMD_SET_CALLBACK");
+        dvr_wrapper_ioctl_record(mRecoderHandle, SEGMENT_DATAOUT_CMD_SET_CALLBACK, &share_cb , sizeof(share_cb));
+    }
+
     if (mIsEncryptStream) {
         MLOGI("set secureBuffer:%p, secureBufferSize:%zu", mSecureBuffer, mSecureBufferSize);
         dvr_wrapper_set_record_secure_buffer(mRecoderHandle, mSecureBuffer, mSecureBufferSize);
@@ -275,6 +285,13 @@ int AmlDVRRecorder::setBasicParams(Aml_MP_DVRRecorderBasicParams* basicParams)
     mRecOpenParams.force_sysclock = basicParams->forceSysClock;
     MLOGI("location:%s", basicParams->location);
 
+    return 0;
+}
+int AmlDVRRecorder::setSharedParams(Aml_MP_DVRRecorderBasicParams* basicParams)
+{
+    mSharedCb = (Aml_MP_CB_Data)basicParams->dataCBFn;
+    mSharedUserData = basicParams->cryptoData;
+    MLOGI("setSharedParams set CB");
     return 0;
 }
 

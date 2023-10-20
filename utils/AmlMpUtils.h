@@ -28,7 +28,7 @@ struct list_head {
 #endif
 #include <dvr_wrapper.h>
 #include <dvb_utils.h>
-
+#include <segment_dataout.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #ifdef ANDROID

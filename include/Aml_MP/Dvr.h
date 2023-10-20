@@ -15,11 +15,13 @@
 #include <stdbool.h>
 
 typedef int (*Aml_MP_CAS_CryptoFunction) (Aml_MP_CASCryptoParams *params, void *userdata);
+typedef int (*Aml_MP_CB_Data) (unsigned char *buf, size_t size, void *priv);
 
 ///////////////////////////////////////////////////////////////////////////////
 typedef enum {
     AML_MP_DVRRECORDER_SCRAMBLED = (1 << 0),
     AML_MP_DVRRECORDER_ACCURATE  = (1 << 1),
+    AML_MP_DVRRECORDER_DATAOUT   = (1 << 2),
 } Aml_MP_DVRRecorderFlag;
 
 typedef struct {
@@ -36,7 +38,9 @@ typedef struct {
                                                     //0: determine index time source based on actual situation
     bool                        appendMode __AML_MP_RESERVE_ALIGNED;   //1:save record file with same location
                                                                        //0:delete the record file with location before
-    long                        reserved[7];
+    Aml_MP_CB_Data              dataCBFn __AML_MP_RESERVE_ALIGNED;
+    void*                       cryptoData __AML_MP_RESERVE_ALIGNED;
+    long                        reserved[5];
 } Aml_MP_DVRRecorderBasicParams;
 
 typedef struct {

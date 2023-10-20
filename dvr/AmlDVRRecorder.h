@@ -33,6 +33,7 @@ private:
     int setBasicParams(Aml_MP_DVRRecorderBasicParams* basicParams);
     int setTimeShiftParams(Aml_MP_DVRRecorderTimeShiftParams* timeShiftParams);
     int setEncryptParams(Aml_MP_DVRRecorderEncryptParams* encryptParams);
+    int setSharedParams(Aml_MP_DVRRecorderBasicParams* basicParams);
 
     DVR_Result_t eventHandler(DVR_RecordEvent_t event, void* params);
 
@@ -49,6 +50,9 @@ private:
 
     Aml_MP_DVRRecorderEventCallback mEventCb = nullptr;
     void* mEventUserData = nullptr;
+    Aml_MP_CB_Data mSharedCb = nullptr;
+    void* mSharedUserData = nullptr;
+    bool mIsOutData;
 
 private:
     AmlDVRRecorder(const AmlDVRRecorder&) = delete;
