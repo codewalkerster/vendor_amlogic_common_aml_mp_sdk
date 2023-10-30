@@ -755,7 +755,7 @@ enum {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-#define AML_MP_DVR_STREAMS_COUNT 16
+#define AML_MP_DVR_STREAMS_COUNT 32
 
 typedef struct {
     Aml_MP_StreamType   type;
