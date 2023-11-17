@@ -15,6 +15,9 @@
 #include <cutils/properties.h>
 #include <dvr_utils.h>
 #include <utils/AmlMpUtils.h>
+#if !defined (ANDROID) || ANDROID_PLATFORM_SDK_VERSION >= 30
+#include <segment_dataout.h>
+#endif
 
 namespace aml_mp {
 static void convertToMpDVRRecorderStatus(Aml_MP_DVRRecorderStatus* mpStatus, DVR_WrapperRecordStatus_t* dvrStatus);
@@ -197,13 +200,13 @@ int AmlDVRRecorder::start()
         MLOGE("Open dvr record fail");
         return -1;
     }
-
+#if !defined (ANDROID) || ANDROID_PLATFORM_SDK_VERSION >= 30
     if (mIsOutData) {
         Segment_DataoutCallback_t share_cb = { mSharedCb, mSharedUserData};
         MLOGI("DVRRecorder Start ioctl AML_MP_SEGMENT_DATAOUT_CMD_SET_CALLBACK");
         dvr_wrapper_ioctl_record(mRecoderHandle, SEGMENT_DATAOUT_CMD_SET_CALLBACK, &share_cb , sizeof(share_cb));
     }
-
+#endif
     if (mIsEncryptStream) {
         MLOGI("set secureBuffer:%p, secureBufferSize:%zu", mSecureBuffer, mSecureBufferSize);
         dvr_wrapper_set_record_secure_buffer(mRecoderHandle, mSecureBuffer, mSecureBufferSize);
