@@ -942,7 +942,7 @@ int Playback::writeData(const uint8_t* buffer, size_t size)
     int wlen = -1;
 
     if (mDemuxer) {
-        bool overflow;
+        bool overflow = false;
         mDemuxer->getFlowStatus(nullptr, &overflow);
         if (overflow) {
             //MLOGI("overflow!");
