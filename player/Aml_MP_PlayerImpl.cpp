@@ -2277,7 +2277,6 @@ void AmlMpPlayerImpl::resetVariables_l()
     mLastBytesWritten = 0;
     mLastWrittenTimeUs = 0;
     mAudioStoppedInSwitching = false;
-    mVideoDecodeMode = AML_MP_VIDEO_DECODE_MODE_NONE;
 
     resetDrmVariables_l();
 }
