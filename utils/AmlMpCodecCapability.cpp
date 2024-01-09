@@ -63,7 +63,8 @@ bool AmlMpCodecCapability::matchVideoCodecType(std::string str, Aml_MP_CodecID* 
 }
 
 bool AmlMpCodecCapability::matchMaxResolution(std::string str, Aml_MP_Resolution* resolution) {
-    *resolution = AML_MP_RESOLUTION_1080P;
+    /* Not set default max resolution */
+    *resolution = AML_MP_RESOLUTION_MAX;
 
     for (ResolutionNamePair testPair : mResolutionMap) {
         if (testPair.resolutionStr == str) {
@@ -87,7 +88,7 @@ void AmlMpCodecCapability::getVideoDecoderCapability(std::string str){
         if (splitInfo.size() > 1) {
             matchMaxResolution(splitInfo[1], &(info.decoderMaxResolution));
         } else {
-            info.decoderMaxResolution = AML_MP_RESOLUTION_1080P;
+            info.decoderMaxResolution = AML_MP_RESOLUTION_MAX;
         }
         mVideoCapabilityMap.push_back(info);
     }
@@ -129,12 +130,16 @@ void AmlMpCodecCapability::getCodecCapabilityStr(Aml_MP_CodecID codecId, char* c
     Json::Value tmpJson;
     std::string tmpString;
     Json::StreamWriterBuilder builder;
+    const char *pstr = NULL;
 
     if (codecId > AML_MP_VIDEO_CODEC_BASE && codecId < AML_MP_VIDEO_CODEC_MAX) {
         for (Aml_MP_DecoderCapabilityInfo tmp: mVideoCapabilityMap) {
             if (codecId == tmp.decoderName) {
                 tmpJson["codecName"] = convertToMIMEString(codecId);
-                tmpJson["maxResolution"] = convertToResolutionString(tmp.decoderMaxResolution);
+                pstr = convertToResolutionString(tmp.decoderMaxResolution);
+                if (pstr) {
+                    tmpJson["maxResolution"] = pstr;
+                }
                 tmpString = Json::writeString(builder, tmpJson);
                 memcpy(caps, tmpString.c_str(), tmpString.length()+1 < size ? tmpString.length()+1 : size);
                 break;
@@ -158,7 +163,7 @@ const char* AmlMpCodecCapability::convertToResolutionString(Aml_MP_Resolution re
     if (resolution < AML_MP_RESOLUTION_MAX) {
         return resolutionMap[resolution];
     }
-    return resolutionMap[AML_MP_RESOLUTION_1080P];
+    return NULL;
 }
 
 }
