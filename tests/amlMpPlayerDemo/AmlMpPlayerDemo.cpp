@@ -250,6 +250,7 @@ static void showUsage()
             "url format: url?program=xx&demuxid=xx&sourceid=xx&fendid=xx\n"
             "    DVB-T dvbt://<freq>/<bandwidth>, eg: dvbt://474/8M\n"
             "    DVB-C dvbc://<freq>/<symbol rate>/<modulation>, eg: dvbc://474/6900/64qam\n"
+            "    DVB-S dvbs://<freq>/<symbol rate>, eg: dvbs://1804/29950\n"
             "    local file, eg: /data/a.ts\n"
             "    dvr replay, eg: dvr:/" AML_MP_TEST_SUPPORTER_RECORD_FILE "\n"
             "    udp source, eg: udp://224.0.0.1:8000\n"

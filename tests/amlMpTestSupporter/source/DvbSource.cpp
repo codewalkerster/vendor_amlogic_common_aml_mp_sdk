@@ -18,7 +18,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+//#define DVBS_DEBUG
 static const char* mName = LOG_TAG;
 
 namespace aml_mp {
@@ -30,6 +30,7 @@ static dmd_device_type_t getDeviceType(const char* proto);
 static int setFendProp(int fendFd, const struct dtv_properties* prop);
 static int lockDvb_T(int fendFd, const dmd_delivery_t* pDelivery);
 static int lockDvb_C(int fendFd, const dmd_delivery_t* pDelivery);
+static int lockDvb_S(int fendFd, const dmd_delivery_t* pDelivery);
 
 static void getDefaultDeliveryConf(dmd_device_type_t type, dmd_delivery_t* delivery)
 {
@@ -52,6 +53,17 @@ static void getDefaultDeliveryConf(dmd_device_type_t type, dmd_delivery_t* deliv
         break;
 
     case DMD_SATELLITE:
+        delivery->device_type = DMD_SATELLITE;
+        delivery->delivery.satellite.frequency = 1804*1000;
+        delivery->delivery.satellite.symbol_rate = 29950;
+        delivery->delivery.satellite.modulation_system = DMD_MODSYS_DVBS;
+        delivery->delivery.satellite.modulation = DMD_MOD_QPSK;
+        delivery->delivery.satellite.fec_rate = DMD_FEC_ALL;
+        delivery->delivery.satellite.lnb_tone_state = DMD_LNB_TONE_DEFAULT;
+        delivery->delivery.satellite.tone_state = DMD_LNB_TONE_DEFAULT;
+        delivery->delivery.satellite.vol = DMD_LNB_VOLTAGE_OFF;
+        break;
+    default:
         break;
     }
 }
@@ -171,6 +183,30 @@ int DvbSource::initCheck()
                 }
                 break;
             }
+            }
+        }
+        break;
+
+        case DMD_SATELLITE:
+        {
+            switch (index) {
+                // freq
+                case 0:
+                {
+                    double freq = std::stod(token);
+                    MLOGI("freq: %.2f", freq);
+                    mDelivery.delivery.satellite.frequency = freq *1000;
+                }
+                break;
+
+                //symbol rate
+                case 1:
+                {
+                    double symbolRate = std::stod(token);
+                    MLOGI("symbol rate: %.2f", symbolRate);
+                    mDelivery.delivery.satellite.symbol_rate = symbolRate;
+                }
+                break;
             }
         }
         break;
@@ -308,6 +344,7 @@ struct ProtoItem {
 static ProtoItem g_protoList[] = {
     {"dvbt", DMD_TERRESTRIAL, &lockDvb_T},
     {"dvbc", DMD_CABLE, &lockDvb_C},
+    {"dvbs", DMD_SATELLITE, &lockDvb_S},
     {nullptr, (dmd_device_type_t)0, nullptr},
 };
 
@@ -512,6 +549,194 @@ static int lockDvb_C(int fendFd, const dmd_delivery_t * pDelivery)
    props.props = (struct dtv_property *)&p;
 
    return setFendProp(fendFd, &props);
+}
+
+static int lockDvb_S(int fendFd, const dmd_delivery_t * pDelivery) {
+    MLOGI("%s", __FUNCTION__);
+
+    int cmd_num = 0;
+    int code_rate = 0;
+    int roll_off = 0;
+    int modulation = 0;
+    fe_sec_tone_mode_t tone;
+    fe_sec_voltage_t voltage;
+    struct dtv_properties props;
+    struct dtv_property p[DTV_IOCTL_MAX_MSGS];
+
+#ifdef DVBS_DEBUG
+    if (ioctl(fendFd, FE_SET_TONE, tone) == -1) {
+        MLOGI("set TONE failed, %d\n", tone);
+    }
+    //diseqc_port
+     MLOGI("Diseqc, LNB tone:%d, port:%d\n",
+        pDelivery->delivery.satellite.lnb_tone_state,
+        pDelivery->delivery.satellite.diseqc_port);
+
+    if (ioctl(fendFd, FE_SET_VOLTAGE, voltage) == -1) {
+        MLOGI("ioctl FE_SET_VOLTAGE failed, fd:%d error:%d", fendFd, errno);
+    }
+#endif
+
+    //modulation_system
+    p[cmd_num].cmd = DTV_DELIVERY_SYSTEM;
+    p[cmd_num].u.data = pDelivery->delivery.satellite.modulation_system == DMD_MODSYS_DVBS2 ? SYS_DVBS2 : SYS_DVBS;
+    cmd_num++;
+
+    //frequency
+    p[cmd_num].cmd = DTV_FREQUENCY;
+    p[cmd_num].u.data = pDelivery->delivery.satellite.frequency - pDelivery->delivery.satellite.band.lo;
+    cmd_num++;
+
+    //symbol_rate
+    p[cmd_num].cmd = DTV_SYMBOL_RATE;
+    p[cmd_num].u.data = pDelivery->delivery.satellite.symbol_rate * 1000;
+    cmd_num++;
+
+    //modulation
+    modulation = pDelivery->delivery.satellite.modulation;
+    switch (modulation) {
+        case DMD_MOD_NONE:
+            modulation = QAM_AUTO;
+            break;
+        case DMD_MOD_QPSK:
+            modulation = QPSK;
+            break;
+        case DMD_MOD_8PSK:
+            modulation = PSK_8;
+            break;
+        case DMD_MOD_QAM:
+            modulation = QAM_AUTO;
+            break;
+        case DMD_MOD_4QAM:
+            modulation = QAM_AUTO;
+            break;
+        case DMD_MOD_16QAM:
+            modulation = QAM_16;
+            break;
+        case DMD_MOD_32QAM:
+            modulation = QAM_32;
+            break;
+        case DMD_MOD_64QAM:
+            modulation = QAM_64;
+            break;
+        case DMD_MOD_128QAM:
+            modulation = QAM_128;
+            break;
+        case DMD_MOD_256QAM:
+            modulation = QAM_256;
+            break;
+        case DMD_MOD_BPSK:
+        case DMD_MOD_ALL:
+            modulation = QAM_AUTO;
+            break;
+    }
+    p[cmd_num].cmd = DTV_MODULATION;
+    p[cmd_num].u.data = modulation;
+    cmd_num++;
+
+    //fec_rate
+    code_rate = pDelivery->delivery.satellite.fec_rate;
+    switch (code_rate) {
+        case DMD_FEC_NONE:
+            code_rate = FEC_NONE;
+            break;
+        case DMD_FEC_1_2:
+            code_rate = FEC_1_2;
+            break;
+        case DMD_FEC_2_3:
+            code_rate = FEC_2_3;
+            break;
+        case DMD_FEC_3_4:
+            code_rate = FEC_3_4;
+            break;
+        case DMD_FEC_4_5:
+            code_rate = FEC_4_5;
+            break;
+        case DMD_FEC_5_6:
+            code_rate = FEC_5_6;
+            break;
+        case DMD_FEC_6_7:
+            code_rate = FEC_6_7;
+            break;
+        case DMD_FEC_7_8:
+            code_rate = FEC_7_8;
+            break;
+        case DMD_FEC_8_9:
+            code_rate = FEC_8_9;
+            break;
+        case DMD_FEC_3_5:
+            code_rate = FEC_3_5;
+            break;
+        case DMD_FEC_9_10:
+            code_rate = FEC_9_10;
+            break;
+        case DMD_FEC_ALL:
+        default:
+            code_rate = FEC_AUTO;
+            break;
+    }
+    p[cmd_num].cmd = DTV_INNER_FEC;
+    p[cmd_num].u.data = code_rate;
+    cmd_num++;
+
+    //rolloff
+    p[cmd_num].cmd = DTV_ROLLOFF;
+    roll_off = pDelivery->delivery.satellite.roll_off;
+    switch (roll_off) {
+        case DMD_ROLLOFF_035:
+            roll_off = ROLLOFF_35;
+            break;
+        case DMD_ROLLOFF_020:
+            roll_off = ROLLOFF_20;
+            break;
+        case DMD_ROLLOFF_025:
+            roll_off = ROLLOFF_25;
+            break;
+        default:
+            roll_off = ROLLOFF_AUTO;
+            break;
+    }
+    p[cmd_num].u.data = roll_off;
+    cmd_num++;
+
+    //LNB TONE
+    switch (pDelivery->delivery.satellite.lnb_tone_state) {
+        case DMD_LNB_TONE_DEFAULT:
+            tone = (pDelivery->delivery.satellite.tone_state == DMD_LNB_TONE_22KHZ) ? SEC_TONE_ON : SEC_TONE_OFF;
+            break;
+        case DMD_LNB_TONE_OFF:
+            tone = SEC_TONE_OFF;
+            break;
+        case DMD_LNB_TONE_22KHZ:
+            tone = SEC_TONE_ON;
+            break;
+        default:
+            tone = SEC_TONE_OFF;
+            break;
+    }
+
+    //LNB voltage
+    switch (pDelivery->delivery.satellite.vol) {
+        case DMD_LNB_VOLTAGE_14V:
+            voltage = SEC_VOLTAGE_13;
+            break;
+        case DMD_LNB_VOLTAGE_18V:
+            voltage = SEC_VOLTAGE_18;
+            break;
+        case DMD_LNB_VOLTAGE_OFF:
+        default:
+            voltage = SEC_VOLTAGE_OFF;
+            break;
+    }
+
+    //DTV_TUNE
+    p[cmd_num].cmd = DTV_TUNE;
+    cmd_num++;
+
+    props.num = cmd_num;
+    props.props = (struct dtv_property *)&p;
+
+    return setFendProp(fendFd, &props);
 }
 
 }

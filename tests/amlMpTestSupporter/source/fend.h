@@ -212,6 +212,8 @@ typedef struct
   dmd_lnb_tone_state_t    lnb_tone_state;
   dmd_diseqc_port_t       diseqc_port;
   dmd_satellite_band_t    band;
+  dmd_lnb_tone_state_t    tone_state;
+  dmd_lnb_voltage_t       vol;
 } dmd_satellite_desc_t;
 
 typedef struct
