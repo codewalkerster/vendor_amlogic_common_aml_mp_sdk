@@ -152,6 +152,7 @@ typedef enum {
     AML_MP_MEDIAPLAYER_PARAMETER_ONLYHINT_TYPE,                        //setOnlyHintType(Aml_MP_MediaPlayerOnlyHintType*)
     AML_MP_MEDIAPLAYER_PARAMETER_VIDEO_TUNNEL_ID,                      //setVideoTunnelID(int*)
     AML_MP_MEDIAPLAYER_PARAMETER_CHANNEL_ID,                           //0:main,others:pip
+    AML_MP_MEDIAPLAYER_PARAMETER_ID3_INFO,                             //getID3Info(Aml_MP_MediaPlayerID3Info*)
 } Aml_MP_MediaPlayerParameterKey;
 
 //AML_MP_MEDIAPLAYER_PARAMETER_ONLYHINT_TYPE
@@ -161,6 +162,20 @@ typedef enum {
     AML_MP_MEDIAPLAYER_AUDIO_ONLYHIT  = (1 << 1),
 } Aml_MP_MediaPlayerOnlyHintType;
 
+////////////////////////////////////////////
+//Aml_MP_MediaPlayerID3Info
+typedef struct
+{
+    char title[40];                                                 //MP3_ID3_title
+    char author[40];                                                //MP3_ID3_artist
+    char album[40];                                                 //MP3_ID3_album
+    char comment[40];                                               //MP3_ID3_comment
+    char year[4];                                                   //MP3_ID3_year
+    int track;                                                      //MP3_ID3_track
+    char genre[32];                                                 //MP3_ID3_genre
+    char copyright[40];                                             //MP3_ID3_copyright
+    long reserved[8];
+} Aml_MP_MediaPlayerID3Info;
 
 ///////////////////////////////////////////////////////////////////////////////
 //********************* BASIC INTERFACES BEGIN **************************/

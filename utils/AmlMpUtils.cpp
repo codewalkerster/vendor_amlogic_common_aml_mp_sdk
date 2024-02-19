@@ -84,6 +84,7 @@ const char* mpCodecId2Str(Aml_MP_CodecID codecId)
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_FLAC);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_VORBIS);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_OPUS);
+        ENUM_TO_STR(AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_MAX);
 
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_BASE);
@@ -518,6 +519,11 @@ am_tsplayer_audio_codec convertToAudioCodec(Aml_MP_CodecID aml_MP_AudioCodec) {
             return AV_AUDIO_CODEC_VORBIS;
         case AML_MP_AUDIO_CODEC_OPUS:
             return AV_AUDIO_CODEC_OPUS;
+#ifndef ANDROID
+        // Android media_hal not define follow enum, for Linux version only
+        case AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV:
+            return AV_AUDIO_CODEC_PCM_ADPCM_IMA_WAV;
+#endif
 
         default:
             return AV_AUDIO_CODEC_AUTO;
@@ -1331,6 +1337,7 @@ const char codecMap[][20][30] = {
         "audio/flac",       //AML_MP_AUDIO_CODEC_FLAC
         "audio/vorbis",     //AML_MP_AUDIO_CODEC_VORBIS
         "audio/opus",       //AML_MP_AUDIO_CODEC_OPUS
+        "audio/adpcm",       //AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV
     },
 };
 

@@ -227,6 +227,7 @@ private:
     Aml_MP_PlayerWorkMode mWorkMode{(Aml_MP_PlayerWorkMode)-1};
     Aml_MP_VideoErrorRecoveryMode mVideoErrorRecoveryMode{(Aml_MP_VideoErrorRecoveryMode)-1};
     Aml_MP_AudioLanguage mAudioLanguage;
+    int mAudioBlockAlign{-1};
 
     float mVolume = -1.0;
     float mADVolume = -1.0;

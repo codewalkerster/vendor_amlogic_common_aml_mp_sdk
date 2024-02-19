@@ -324,6 +324,9 @@ int AmlMpPlayerImpl::start_l()
         if (mSPDIFStatus != -1) {
             mPlayer->setParameter(AML_MP_PLAYER_PARAMETER_SPDIF_PROTECTION, &mSPDIFStatus);
         }
+        if (mAudioBlockAlign > 0) {
+            mPlayer->setParameter(AML_MP_PLAYER_PARAMETER_AUDIO_BLOCK_ALIGN, &mAudioBlockAlign);
+        }
     }
 
     if (mSubtitleParams.subtitleCodec != AML_MP_CODEC_UNKNOWN) {
@@ -519,6 +522,9 @@ int AmlMpPlayerImpl::flush()
         }
         if (mSPDIFStatus != -1) {
             mPlayer->setParameter(AML_MP_PLAYER_PARAMETER_SPDIF_PROTECTION, &mSPDIFStatus);
+        }
+        if (mAudioBlockAlign > 0) {
+            mPlayer->setParameter(AML_MP_PLAYER_PARAMETER_AUDIO_BLOCK_ALIGN, &mAudioBlockAlign);
         }
     }
     if (getDecodingState_l(AML_MP_STREAM_TYPE_AD) == AML_MP_DECODING_STATE_STARTED ||
@@ -1198,6 +1204,14 @@ int AmlMpPlayerImpl::setParameter_l(Aml_MP_PlayerParameterKey key, void* paramet
         break;
     }
 
+    case AML_MP_PLAYER_PARAMETER_AUDIO_BLOCK_ALIGN:
+    {
+        RETURN_IF(-1, parameter == nullptr);
+        mAudioBlockAlign = *(int*)parameter;
+        MLOGI("set audio block_align:%d", mAudioBlockAlign);
+        break;
+    }
+
     default:
         MLOGW("unhandled key: %s", mpPlayerParameterKey2Str(key));
         return ret;
@@ -1387,6 +1401,9 @@ int AmlMpPlayerImpl::startAudioDecoding_l()
     }
     if (mSPDIFStatus != -1) {
         mPlayer->setParameter(AML_MP_PLAYER_PARAMETER_SPDIF_PROTECTION, &mSPDIFStatus);
+    }
+    if (mAudioBlockAlign > 0) {
+        mPlayer->setParameter(AML_MP_PLAYER_PARAMETER_AUDIO_BLOCK_ALIGN, &mAudioBlockAlign);
     }
 
     ret = mPlayer->startAudioDecoding();

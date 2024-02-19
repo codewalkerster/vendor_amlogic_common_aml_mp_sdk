@@ -105,7 +105,7 @@ static bool AMMP_DEBUG_MODE_ENABLE = false;
     do {                                                                                        \
         printf(RED "---------------------------ERROR---------------------------\n" WRESET);     \
         printf(RED "-----------------------------------------------------------\n" WRESET);     \
-        printf(RED fmt "\n", ##__VA_ARGS__ WRESET);                                             \
+        printf(RED fmt "\n", ##__VA_ARGS__);                                                    \
         printf(RED "-----------------------------------------------------------\n" WRESET);     \
         printf(RED "---------------------------ERROR---------------------------\n" WRESET);     \
     } while (0)
@@ -1129,7 +1129,21 @@ exit:
             printCurTrackInfo(&trackReply.u.trackInfo, &mediaReply.u.mediaInfo, AML_MP_STREAM_TYPE_AUDIO);
             printCurTrackInfo(&trackReply.u.trackInfo, &mediaReply.u.mediaInfo, AML_MP_STREAM_TYPE_SUBTITLE);
             printMediaInfo(&mediaReply.u.mediaInfo);
-            printf("call isplaying ret: %d\n", Aml_MP_MediaPlayer_IsPlaying(player));
+
+            Aml_MP_MediaPlayerID3Info ID3Info;
+            memset(&ID3Info, 0, sizeof(Aml_MP_MediaPlayerID3Info));
+            ret = Aml_MP_MediaPlayer_GetParameter(player, AML_MP_MEDIAPLAYER_PARAMETER_ID3_INFO, (void*)&ID3Info);
+            if (ret == 0)
+            {
+                printf("ID3Info title: %s\n", ID3Info.title);
+                printf("ID3Info author: %s\n", ID3Info.author);
+                printf("ID3Info album: %s\n", ID3Info.album);
+                printf("ID3Info comment: %s\n", ID3Info.comment);
+                printf("ID3Info year: %s\n", ID3Info.year);
+                printf("ID3Info track: %d\n", ID3Info.track);
+                printf("ID3Info genre: %s\n", ID3Info.genre);
+                printf("ID3Info copyright: %s\n", ID3Info.copyright);
+            }
 
             return ret;
         }
@@ -1934,6 +1948,16 @@ void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t par
             printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_STOPPED, id:%d\n",__FUNCTION__,__LINE__, demo->mId);
             break;
         }
+        case AML_MP_MEDIAPLAYER_EVENT_VIDEO_UNSUPPORT:
+        {
+            TERMINAL_ERROR("%s at #%d AML_MP_MEDIAPLAYER_EVENT_VIDEO_UNSUPPORT, id:%d, format:%" PRId64 "\n", __FUNCTION__, __LINE__, demo->mId, param);
+            break;
+        }
+        case AML_MP_MEDIAPLAYER_EVENT_AUDIO_UNSUPPORT:
+        {
+            TERMINAL_ERROR("%s at #%d AML_MP_MEDIAPLAYER_EVENT_AUDIO_UNSUPPORT, id:%d, format:%" PRId64 "\n", __FUNCTION__, __LINE__, demo->mId, param);
+            break;
+        }
         default:
             break;
     }
@@ -2071,4 +2095,3 @@ begin:
 
     return ret;
 }
-

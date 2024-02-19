@@ -816,6 +816,17 @@ int AmlTsPlayer::setParameter(Aml_MP_PlayerParameterKey key, void* parameter) {
             break;
         }
 
+        case AML_MP_PLAYER_PARAMETER_AUDIO_BLOCK_ALIGN:
+        {
+            char block_align[50] = {0};
+            sprintf(block_align, "adpcm_block_size=%d", *(int*)parameter);
+            MLOGI("block_align: %s", block_align);
+            //Reusing the key "AM_TSPLAYER_KEY_SET_WMA_DESCR".
+            ret = AmTsPlayer_setParams(mPlayer, AM_TSPLAYER_KEY_SET_WMA_DESCR, (void*)block_align);
+
+            break;
+        }
+
         case AML_MP_PLAYER_PARAMETER_VIDEO_TUNNEL_ID:
         {
             mVideoTunnelId = *(int*)parameter;
