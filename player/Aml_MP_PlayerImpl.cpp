@@ -1879,7 +1879,7 @@ bool AmlMpPlayerImpl::tryWaitEcm_l() {
     resetDrmVariables_l();
 
     if (mWaitingEcmMode != kWaitingEcmASynchronous) {
-        return true;
+        return false;
     }
 
     openParser_l();
