@@ -1331,7 +1331,7 @@ exit:
     },
 /*
     {
-        "R", 0, "call reset",
+        "Y", 0, "call reset",
         [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
             int ret = Aml_MP_MediaPlayer_Reset(player);
             printf("call reset ret: %d\n", ret);
@@ -1340,7 +1340,7 @@ exit:
     },
 
     {
-        "b", 0, "call prepare",
+        "y", 0, "call prepare",
         [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
             int ret = Aml_MP_MediaPlayer_Prepare(player);
             printf("call prepare ret: %d\n", ret);
@@ -1349,7 +1349,7 @@ exit:
     },
 
     {
-        "T", 0, "call start",
+        "U", 0, "call start",
         [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
             int ret = Aml_MP_MediaPlayer_Start(player);
             printf("call start ret: %d\n", ret);
@@ -1358,7 +1358,7 @@ exit:
     },
 
     {
-        "t", 0, "call stop",
+        "u", 0, "call stop",
         [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
             int ret = Aml_MP_MediaPlayer_Stop(player);
             printf("call stop ret: %d\n", ret);
@@ -2104,6 +2104,12 @@ void demoCallback(void* userData, Aml_MP_MediaPlayerEventType event, int64_t par
             printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE, id:%d, noAutoExit:%d\n",__FUNCTION__,__LINE__, demo->mId, argument == NULL ? -1 : argument->noAutoExit);
             break;
         }
+        case AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_SOF:
+        {
+            printf("%s at #%d AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_SOF, id:%d, noAutoExit:%d\n",__FUNCTION__,__LINE__, demo->mId, argument == NULL ? -1 : argument->noAutoExit);
+            break;
+        }
+
         case AML_MP_MEDIAPLAYER_EVENT_PREPARED:
         {
             if (demo) {

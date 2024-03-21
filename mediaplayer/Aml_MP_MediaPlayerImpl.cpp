@@ -727,7 +727,7 @@ void AmlMpMediaPlayerImpl::notifyListener(Aml_MP_MediaPlayerEventType eventType,
 {
     std::unique_lock<std::mutex> _l(mEventLock);
     if (mEventCb) {
-        if (eventType == AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE) {
+        if (eventType == AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_COMPLETE || eventType == AML_MP_MEDIAPLAYER_EVENT_PLAYBACK_SOF) {
             setState_l(STATE_COMPLETED);
         }
         mEventCb(mUserData, eventType, param);
