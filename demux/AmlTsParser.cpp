@@ -1046,12 +1046,6 @@ int Parser::addFilter(int pid, Aml_MP_Demux_FilterCb cb, void* userData, const A
         return ret;
     }
 
-    ret = mDemux->openChannel(context->channel);
-    if (ret < 0) {
-        MLOGE("open channel pid:%d failed!", pid);
-        return ret;
-    }
-
     context->filter = mDemux->createFilter(cb, userData);
     if (ret < 0) {
         MLOGE("create filter for pid:%d failed!", pid);
