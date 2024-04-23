@@ -493,12 +493,11 @@ am_tsplayer_video_codec convertToVideoCodec(Aml_MP_CodecID aml_MP_VideoCodec) {
             return AV_VIDEO_CODEC_VC1;
 #endif
 #endif
-#ifdef ANDROID  //bellow codec types not found in mediahal linux sdk
+
         case AML_MP_VIDEO_CODEC_DVES_AVC:
             return AV_VIDEO_CODEC_DVES_AVC;
         case AML_MP_VIDEO_CODEC_DVES_HEVC:
             return AV_VIDEO_CODEC_DVES_HEVC;
-#endif
         default:
             return AV_VIDEO_CODEC_AUTO;
     }
@@ -705,6 +704,13 @@ DVR_VideoFormat_t convertToDVRVideoFormat(Aml_MP_CodecID codecId)
             return DVR_VIDEO_FORMAT_HEVC;
         case AML_MP_VIDEO_CODEC_VP9:
             return DVR_VIDEO_FORMAT_VP9;
+// waiting libdvr to add codec type defines, now disable these  type converts.
+#if 0
+        case AML_MP_VIDEO_CODEC_DVES_AVC:
+            return DVR_VIDEO_FORMAT_DVES_AVC;
+        case AML_MP_VIDEO_CODEC_DVES_HEVC:
+            return DVR_VIDEO_FORMAT_DVES_HEVC;
+#endif
         default:
             MLOGE("unknown video codecId:%d", codecId);
             return DVR_VIDEO_FORMAT_MPEG2;
