@@ -6,7 +6,7 @@ AML_MP_PLAYER_DEMO_SRCS := \
 AML_MP_PLAYER_DEMO_INC :=
 
 AML_MP_PLAYER_DEMO_CFLAGS := -DANDROID_PLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION) \
-	-Werror -Wsign-compare
+	-Werror -Wsign-compare  -Wno-multichar
 
 AML_MP_PLAYER_DEMO_SHARED_LIBS := \
 	libutils \
