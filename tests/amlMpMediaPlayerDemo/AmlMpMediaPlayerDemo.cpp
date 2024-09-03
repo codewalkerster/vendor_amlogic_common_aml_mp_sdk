@@ -1004,8 +1004,6 @@ exit:
                 goto exit;
             }
 
-            //TODO: selectTrack
-            ret = 0;
             Aml_MP_MediaPlayerInvokeRequest selectrequest;
             Aml_MP_MediaPlayerInvokeReply selectreply;
             memset(&selectrequest, 0, sizeof(Aml_MP_MediaPlayerInvokeRequest));
@@ -1017,6 +1015,39 @@ exit:
 
 exit:
             printf("Set Next Audio component, ret:%d, index:%d\n", ret, index);
+            return ret;
+        }
+    },
+
+    {
+        "U", 0, "Unselect CurAudio component",
+        [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
+            int ret = -1, index = -1;
+
+            Aml_MP_MediaPlayerInvokeRequest mediaRequest;
+            Aml_MP_MediaPlayerInvokeReply mediaReply;
+            memset(&mediaRequest, 0, sizeof(Aml_MP_MediaPlayerInvokeRequest));
+            memset(&mediaReply, 0, sizeof(Aml_MP_MediaPlayerInvokeReply));
+            mediaRequest.requestId = AML_MP_MEDIAPLAYER_INVOKE_ID_GET_MEDIA_INFO;
+            ret = Aml_MP_MediaPlayer_Invoke(player, &mediaRequest, &mediaReply);
+
+            index = mediaReply.u.mediaInfo.curAudioIndex;
+
+            if (index < 0) {
+                goto exit;
+            }
+
+            Aml_MP_MediaPlayerInvokeRequest selectrequest;
+            Aml_MP_MediaPlayerInvokeReply selectreply;
+            memset(&selectrequest, 0, sizeof(Aml_MP_MediaPlayerInvokeRequest));
+            memset(&selectreply, 0, sizeof(Aml_MP_MediaPlayerInvokeReply));
+
+            selectrequest.requestId = AML_MP_MEDIAPLAYER_INVOKE_ID_UNSELECT_TRACK;
+            selectrequest.u.data32 = index;
+            ret = Aml_MP_MediaPlayer_Invoke(player, &selectrequest, &selectreply);
+
+exit:
+            printf("Unselect Current Audio component, ret:%d, index:%d\n", ret, index);
             return ret;
         }
     },
@@ -1072,13 +1103,49 @@ exit:
                 goto exit;
             }
 
-            //TODO: selectTrack
-            ret = 0;
-
+            Aml_MP_MediaPlayerInvokeRequest selectrequest;
+            Aml_MP_MediaPlayerInvokeReply selectreply;
+            memset(&selectrequest, 0, sizeof(Aml_MP_MediaPlayerInvokeRequest));
+            memset(&selectreply, 0, sizeof(Aml_MP_MediaPlayerInvokeReply));
+            selectrequest.requestId = AML_MP_MEDIAPLAYER_INVOKE_ID_SELECT_TRACK;
+            selectrequest.u.data32 = index;
+            ret = Aml_MP_MediaPlayer_Invoke(player, &selectrequest, &selectreply);
 exit:
             printf("Set Next Subtitle component, ret:%d, index:%d\n", ret, index);
             return ret;
 
+        }
+    },
+    {
+        "u", 0, "Unselect CurSubtitle component",
+        [](AML_MP_MEDIAPLAYER player, const std::vector<std::string>& args __unused) -> int {
+            int ret = -1, index = -1;
+
+            Aml_MP_MediaPlayerInvokeRequest mediaRequest;
+            Aml_MP_MediaPlayerInvokeReply mediaReply;
+            memset(&mediaRequest, 0, sizeof(Aml_MP_MediaPlayerInvokeRequest));
+            memset(&mediaReply, 0, sizeof(Aml_MP_MediaPlayerInvokeReply));
+            mediaRequest.requestId = AML_MP_MEDIAPLAYER_INVOKE_ID_GET_MEDIA_INFO;
+            ret = Aml_MP_MediaPlayer_Invoke(player, &mediaRequest, &mediaReply);
+
+            index = mediaReply.u.mediaInfo.curSubIndex;
+
+            if (index < 0) {
+                goto exit;
+            }
+
+            Aml_MP_MediaPlayerInvokeRequest selectrequest;
+            Aml_MP_MediaPlayerInvokeReply selectreply;
+            memset(&selectrequest, 0, sizeof(Aml_MP_MediaPlayerInvokeRequest));
+            memset(&selectreply, 0, sizeof(Aml_MP_MediaPlayerInvokeReply));
+
+            selectrequest.requestId = AML_MP_MEDIAPLAYER_INVOKE_ID_UNSELECT_TRACK;
+            selectrequest.u.data32 = index;
+            ret = Aml_MP_MediaPlayer_Invoke(player, &selectrequest, &selectreply);
+
+exit:
+            printf("Unselect Current Audio component, ret:%d, index:%d\n", ret, index);
+            return ret;
         }
     },
 
@@ -1998,6 +2065,8 @@ static void showOption()
     "         A.................Set Next Audio component\n"
     "         s.................Get Subtitles Info channels\n"
     "         S.................Set Next Subtitle component\n"
+    "         U.................Unselect CurAudio component\n"
+    "         u.................Unselect CurSubtitle component\n"
     "         i.................Get Track/Media info\n"
     "         n.................Get Position [milliseconds]\n"
     "         N.................Get Duration [milliseconds]\n"
