@@ -142,8 +142,10 @@ int AmlCasBase::processEcm(bool isSection, int ecmPid, const uint8_t* data, size
     return 0;
 }
 
-int AmlCasBase::processEmm(const uint8_t* data, size_t size)
+int AmlCasBase::processEmm(bool isSection, int emmPid, const uint8_t* data, size_t size)
 {
+    AML_MP_UNUSED(isSection);
+    AML_MP_UNUSED(emmPid);
     AML_MP_UNUSED(data);
     AML_MP_UNUSED(size);
 
@@ -269,5 +271,23 @@ int AmlCasBase::getEcmPids(std::vector<int>& ecmPids)
     return 0;
 }
 
+int AmlCasBase::getChipID(char* chipid, size_t size)
+{
+    AML_MP_UNUSED(chipid);
+    AML_MP_UNUSED(size);
+    return 0;
+}
+
+const char * AmlCasBase::getCAVersion()
+{
+    return 0;
+}
+
+int AmlCasBase::provision(const Aml_MP_IptvCASParams* params)
+{
+    AML_MP_UNUSED(params);
+
+    return 0;
+}
 
 }

@@ -334,11 +334,42 @@ int Aml_MP_CAS_ProcessEcmIPTV(AML_MP_CASSESSION casSession, bool isSection, int 
     return casBase->processEcm(isSection, ecmPid, data, size);
 }
 
+int Aml_MP_CAS_ProcessEmmIPTV(AML_MP_CASSESSION casSession, bool isSection, int emmPid, const uint8_t* data, size_t size)
+{
+    sptr<AmlCasBase> casBase = aml_handle_cast<AmlCasBase>(casSession);
+    RETURN_IF(-1, casBase == nullptr);
+    return casBase->processEmm(isSection, emmPid, data, size);
+}
+
 int Aml_MP_CAS_DecryptIPTV(AML_MP_CASSESSION casSession, uint8_t* data, size_t size, void* ext_data, Aml_MP_Buffer* outbuffer)
 {
     sptr<AmlCasBase> casBase = aml_handle_cast<AmlCasBase>(casSession);
     RETURN_IF(-1, casBase == nullptr);
     return casBase->decrypt(data, size, ext_data, outbuffer);
+}
+
+int Aml_MP_CAS_GetChipId(AML_MP_CASSESSION casSession, char* chipid, size_t size)
+{
+    sptr<AmlCasBase> casBase = aml_handle_cast<AmlCasBase>(casSession);
+    RETURN_IF(-1, casBase == nullptr);
+
+    return casBase->getChipID(chipid, size);
+}
+
+const char* Aml_MP_CAS_GetCAVersion(AML_MP_CASSESSION casSession)
+{
+    sptr<AmlCasBase> casBase = aml_handle_cast<AmlCasBase>(casSession);
+    RETURN_IF(NULL, casBase == nullptr);
+
+    return casBase->getCAVersion();
+}
+
+int Aml_MP_CAS_ProvisionIPTV(AML_MP_CASSESSION casSession, const Aml_MP_IptvCASParams* params)
+{
+    sptr<AmlCasBase> casBase = aml_handle_cast<AmlCasBase>(casSession);
+    RETURN_IF(-1, casBase == nullptr);
+
+    return casBase->provision(params);
 }
 
 #ifdef __cplusplus

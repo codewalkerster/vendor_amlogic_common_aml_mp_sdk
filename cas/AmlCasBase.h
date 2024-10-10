@@ -46,7 +46,7 @@ public:
     virtual int stopDescrambling() = 0;
     virtual int setPrivateData(const uint8_t* data, size_t size);
     virtual int processEcm(bool isSection, int ecmPid, const uint8_t* data, size_t size);
-    virtual int processEmm(const uint8_t* data, size_t size);
+    virtual int processEmm(bool isSection, int emmPid, const uint8_t* data, size_t size);
     virtual int decrypt(uint8_t *in, int size, void *ext_data, Aml_MP_Buffer* outbuffer);
 
     virtual int updateDescramblingPid(int oldStreamPid, int newStreamPid);
@@ -66,6 +66,9 @@ public:
 
     virtual int ioctl(const char* inJson, char* outJson, uint32_t outLen);
     virtual int getStoreRegion(Aml_MP_CASStoreRegion* region, uint8_t* regionCount);
+    virtual int getChipID(char* chipid, size_t size);
+    virtual const char * getCAVersion();
+    virtual int provision(const Aml_MP_IptvCASParams* params);
 
     Aml_MP_CASServiceType serviceType() const {
         return mServiceType;

@@ -22,12 +22,16 @@ class AmlVMXIptvCas_V2 : public AmlCasBase
 public:
     AmlVMXIptvCas_V2(Aml_MP_CASServiceType serviceType);
     ~AmlVMXIptvCas_V2();
+    virtual int registerEventCallback(Aml_MP_CAS_EventCallback cb, void* userData) override;
     virtual int startDescrambling(const Aml_MP_IptvCASParams* params) override;
     virtual int stopDescrambling() override;
     virtual int setPrivateData(const uint8_t* data, size_t size) override;
     virtual int processEcm(bool isSection, int ecmPid, const uint8_t* data, size_t size) override;
-    virtual int processEmm(const uint8_t* data, size_t size) override;
-    virtual int switchAudioTrack(const Aml_MP_AudioParams* params);
+    virtual int processEmm(bool isSection, int emmPid, const uint8_t* data, size_t size) override;
+    virtual int switchAudioTrack(const Aml_MP_AudioParams* params) override;
+    virtual int getChipID(char * chipid, size_t size) override;
+    virtual const char * getCAVersion() override;
+    virtual int provision(const Aml_MP_IptvCASParams* params) override;
 
 private:
     char mServerPort[10];

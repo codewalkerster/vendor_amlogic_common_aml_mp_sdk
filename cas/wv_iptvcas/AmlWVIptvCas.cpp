@@ -236,13 +236,13 @@ int AmlWVIptvCas::processEcm(bool isSection, int ecmPid, const uint8_t* data, si
     return convertToAmlMPErrorCode((AmCasCode_t)ret);
 }
 
-int AmlWVIptvCas::processEmm(const uint8_t* data, size_t size)
+int AmlWVIptvCas::processEmm(bool isSection, int emmPid, const uint8_t* data, size_t size)
 {
     int ret = 0;
 
     if (pIptvCas) {
         uint8_t *pdata = const_cast<uint8_t *>(data);
-        ret = pIptvCas->processEmm(0, mIptvCasParam.videoPid ,pdata, size);
+        ret = pIptvCas->processEmm(isSection, emmPid, pdata, size);
     }
 
     return convertToAmlMPErrorCode((AmCasCode_t)ret);

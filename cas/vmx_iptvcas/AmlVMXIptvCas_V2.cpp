@@ -41,26 +41,26 @@ AmlVMXIptvCas_V2::~AmlVMXIptvCas_V2()
     pIptvCas.clear();
 }
 
+int AmlVMXIptvCas_V2::registerEventCallback(Aml_MP_CAS_EventCallback callback, void* pUserData)
+{
+    int ret = 0;
+    if (pIptvCas) {
+        ret = pIptvCas->setCasEventCallback(callback, pUserData);
+        if (ret != 0) {
+            MLOGE("setCasEventCallback failed, ret =%d", ret);
+            return ret;
+        }
+    }
+    return ret;
+}
+
 int AmlVMXIptvCas_V2::startDescrambling(const Aml_MP_IptvCASParams* params)
 {
     MLOG();
 
     AmlCasBase::startDescrambling(params);
 
-    int ret = 0;
-    iptvserverinfo_t initParam;
-    memset(&initParam, 0, sizeof(initParam));
-
-    initParam.enablelog = 1;
-    initParam.serveraddr = (char*)params->serverAddress;
-    snprintf(mServerPort, sizeof(mServerPort), "%d", params->serverPort);
-    initParam.serverport = mServerPort;
-    initParam.storepath = (char*)params->keyPath;
-    pIptvCas->setCasInstanceId(params->demuxId);
-    MLOGI("setCasInstanceId: demuxId: %d", params->demuxId);
-    pIptvCas->setPrivateData((void *)&initParam, sizeof(iptvserverinfo_t));
-
-    ret = pIptvCas->provision();
+    int ret = provision(params);
 
     if (pIptvCas) {
         setDscSource(TSN_IPTV);
@@ -82,7 +82,6 @@ int AmlVMXIptvCas_V2::stopDescrambling()
 
     if (pIptvCas) {
         ret = pIptvCas->closeSession(&sessionId[0]);
-        ret = pIptvCas->releaseAmCas();
         pIptvCas.clear();
     }
 
@@ -182,13 +181,13 @@ int AmlVMXIptvCas_V2::processEcm(bool isSection, int ecmPid, const uint8_t* data
     return ret;
 }
 
-int AmlVMXIptvCas_V2::processEmm(const uint8_t* data, size_t size)
+int AmlVMXIptvCas_V2::processEmm(bool isSection, int emmPid, const uint8_t* data, size_t size)
 {
     int ret = 0;
 
     if (pIptvCas) {
         uint8_t *pdata = const_cast<uint8_t *>(data);
-        ret = pIptvCas->processEmm(0, mIptvCasParam.videoPid ,pdata, size);
+        ret = pIptvCas->processEmm(isSection, emmPid, pdata, size);
     }
 
     return ret;
@@ -265,6 +264,52 @@ int AmlVMXIptvCas_V2::setDscSource(const char* source)
     }
 #endif
 #endif
+    return ret;
+}
+
+int AmlVMXIptvCas_V2::getChipID(char * chipid, size_t size)
+{
+    AML_MP_UNUSED(size);
+
+    int ret = 0;
+    if (pIptvCas) {
+        ret = pIptvCas->getChipID(chipid);
+        if (ret != 0) {
+            MLOGI("getChipID failed, ret =%d", ret);
+            return ret;
+        }
+    }
+    return ret;
+}
+
+const char * AmlVMXIptvCas_V2::getCAVersion()
+{
+    if (pIptvCas) {
+        return pIptvCas->getCAVersion();
+    } else {
+        return NULL;
+    }
+}
+
+int AmlVMXIptvCas_V2::provision(const Aml_MP_IptvCASParams* params)
+{
+    MLOG();
+
+    int ret = 0;
+    iptvserverinfo_t initParam;
+    memset(&initParam, 0, sizeof(initParam));
+
+    initParam.enablelog = 1;
+    initParam.serveraddr = (char*)params->serverAddress;
+    snprintf(mServerPort, sizeof(mServerPort), "%d", params->serverPort);
+    initParam.serverport = mServerPort;
+    initParam.storepath = (char*)params->keyPath;
+    pIptvCas->setCasInstanceId(params->demuxId);
+    MLOGI("setCasInstanceId: demuxId: %d", params->demuxId);
+    pIptvCas->setPrivateData((void *)&initParam, sizeof(iptvserverinfo_t));
+
+    ret = pIptvCas->provision();
+
     return ret;
 }
 

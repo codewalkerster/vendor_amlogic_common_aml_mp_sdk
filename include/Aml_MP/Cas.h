@@ -49,8 +49,6 @@ typedef struct {
     Aml_MP_CASSectionType   sectionType;
 } Aml_MP_CASSectionReportAttr;
 
-typedef int (*Aml_MP_CAS_EventCallback)(AML_MP_CASSESSION casSession, const char *json);
-
 typedef enum {
     AML_MP_CAS_ENCRYPT, /**< Encrypt.*/
     AML_MP_CAS_DECRYPT  /**< Decrypt.*/
@@ -381,6 +379,21 @@ int Aml_MP_CAS_GetStoreRegion(AML_MP_CASSESSION casSession, Aml_MP_CASStoreRegio
 int Aml_MP_CAS_ProcessEcmIPTV(AML_MP_CASSESSION casSession, bool isSection, int ecmPid, const uint8_t* data, size_t size);
 
 /**
+ * \brief Aml_MP_CAS_ProcessEmmIPTV
+ * processEmm
+ *
+ * \param [in]  casSession session
+ * \param [in]  isSection is section of is TS packet
+ * \param [in]  emmPid if isSection is true, then need specify the emmPid of emmData
+ * \param [in]  data emmData
+ * \param [in]  size emmData size
+ *
+ * \return 0 if success
+ */
+int Aml_MP_CAS_ProcessEmmIPTV(AML_MP_CASSESSION casSession, bool isSection, int emmPid, const uint8_t* data, size_t size);
+
+
+/**
  * \brief Aml_MP_CAS_DecryptIPTV
  * decrypt data
  *
@@ -393,6 +406,39 @@ int Aml_MP_CAS_ProcessEcmIPTV(AML_MP_CASSESSION casSession, bool isSection, int 
  * \return 0 if success
  */
 int Aml_MP_CAS_DecryptIPTV(AML_MP_CASSESSION casSession, uint8_t* data, size_t size, void* ext_data, Aml_MP_Buffer* outbuffer);
+
+/**
+ * \brief Aml_MP_CAS_GetChipId
+ * get chipid
+ *
+ * \param [in]  CAS session
+ * \param [out]  chipid cas chip id, buf size should >= 17
+ * \param [in] size cas chip id input buffer size
+ *
+ * \return 0 if success
+ */
+int Aml_MP_CAS_GetChipId(AML_MP_CASSESSION casSession, char* chipid, size_t size);
+
+/**
+ * \brief Aml_MP_CAS_GetCAVersion
+ * get cas version
+ *
+ * \param [in]  CAS session
+ *
+ * \return CA version string, user no free
+ */
+const char* Aml_MP_CAS_GetCAVersion(AML_MP_CASSESSION casSession);
+
+/**
+ * \brief Aml_MP_CAS_ProvisionIPTV
+ * provision
+ *
+ * \param [in]  CAS session
+ * \param [in]  params iptv cas params
+ *
+ * \return 0 if success
+ */
+int Aml_MP_CAS_ProvisionIPTV(AML_MP_CASSESSION casSession, const Aml_MP_IptvCASParams* params);
 
 #ifdef __cplusplus
 }

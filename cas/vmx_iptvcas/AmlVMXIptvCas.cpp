@@ -138,8 +138,10 @@ int AmlVMXIptvCas::processEcm(bool isSection, int ecmPid, const uint8_t* data, s
     return sCasLibWrapper->writeData(mCasHandle, data, size);
 }
 
-int AmlVMXIptvCas::processEmm(const uint8_t* data, size_t size)
+int AmlVMXIptvCas::processEmm(bool isSection, int emmPid, const uint8_t* data, size_t size)
 {
+    AML_MP_UNUSED(isSection);
+    AML_MP_UNUSED(emmPid);
     RETURN_IF(-1, mCasHandle == nullptr);
 
     return sCasLibWrapper->writeData(mCasHandle, data, size);

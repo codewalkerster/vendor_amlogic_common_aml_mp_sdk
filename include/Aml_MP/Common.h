@@ -253,6 +253,9 @@ typedef struct {
 } Aml_MP_SubtitleParams;
 
 ////////////////////////////////////////
+// userData parameter would be set to casSession handle if it's CAS HAL plugin
+typedef int (*Aml_MP_CAS_EventCallback)(void* userData, const char *json);
+
 /**\brief Service type of the program*/
 typedef enum {
     AML_MP_CAS_SERVICE_LIVE_PLAY,       /**< Live playing.*/

@@ -46,15 +46,12 @@ AmCasLibWrapper<ServiceType>::~AmCasLibWrapper()
 {
     MLOG();
     if (mCasObj) {
-        //CHECK: hasn't call destructor;
-        //if vmx destruct mCasObj, we just set mCasObj to null
-        //else free the mem
         if (!sCasSymbols.releaseAmCas) {
+            MLOGW("releaseAmCas is nullptr, CHECK!");
             free(mCasObj);
-        } else {
-            mCasObj = nullptr;
+        } else if (sCasSymbols.releaseAmCas(mCasObj) != CAS_STATUS_OK) {
+            MLOGE("releaseAmCas failed");
         }
-        MLOGI("delete mCasObj");
     }
 }
 
@@ -241,6 +238,9 @@ void AmCasLibWrapper<ServiceType>::loadLib(const char *libName)
     sCasSymbols.releaseAll = lookupSymbol<releaseAllFunc>("releaseAll");
     sCasSymbols.selectTrack = lookupSymbol<selectTrackFunc>("selectTrack");
     sCasSymbols.releaseAmCas = lookupSymbol<releaseAmCasFunc>("releaseAmCas");
+    sCasSymbols.getChipID = lookupSymbol<getChipIDFunc>("getChipID");
+    sCasSymbols.getCAVersion = lookupSymbol<getCAVersionFunc>("getCAVersion");
+    sCasSymbols.setCasEventCallback = lookupSymbol<setCasEventCallbackFunc>("setCasEventCallback");
 }
 
 template <Aml_MP_CASServiceType ServiceType>
@@ -289,6 +289,44 @@ F AmCasLibWrapper<ServiceType>::lookupSymbol(const char *symbolName)
     }
 
     return func;
+}
+
+template <Aml_MP_CASServiceType ServiceType>
+AmCasCode_t AmCasLibWrapper<ServiceType>::getChipID(char* chipid)
+{
+    if (!sCasSymbols.getChipID) {
+        return AM_CAS_ERROR;
+    }
+    AmCasStatus_t ret = sCasSymbols.getChipID(chipid);
+    if (ret != CAS_STATUS_OK) {
+        MLOGE("getChipID failed");
+        return AM_CAS_ERROR;
+    }
+    return AM_CAS_SUCCESS;
+}
+
+template <Aml_MP_CASServiceType ServiceType>
+const char* AmCasLibWrapper<ServiceType>::getCAVersion()
+{
+    if (!sCasSymbols.getCAVersion) {
+        return nullptr;
+    }
+    return sCasSymbols.getCAVersion(mCasObj);
+}
+
+template <Aml_MP_CASServiceType ServiceType>
+AmCasCode_t AmCasLibWrapper<ServiceType>::setCasEventCallback(Aml_MP_CAS_EventCallback callback, void* pUserData)
+{
+    if (!sCasSymbols.setCasEventCallback) {
+        return AM_CAS_ERROR;
+    }
+    FCAS_EventFunction_t eventFn = reinterpret_cast<FCAS_EventFunction_t>(callback);
+    AmCasStatus_t ret = sCasSymbols.setCasEventCallback(eventFn, pUserData);
+    if (ret != CAS_STATUS_OK) {
+        MLOGE("setCasEventCallback failed");
+        return AM_CAS_ERROR;
+    }
+    return AM_CAS_SUCCESS;
 }
 
 template class AmCasLibWrapper<AML_MP_CAS_SERVICE_VERIMATRIX_IPTV>;

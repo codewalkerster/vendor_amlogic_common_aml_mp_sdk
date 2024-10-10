@@ -106,15 +106,6 @@ int AmlNagraWebCas::processEcm(bool isSection, int ecmPid, const uint8_t* data, 
     return ret;
 }
 
-int AmlNagraWebCas::processEmm(const uint8_t* data, size_t size)
-{
-    AML_MP_UNUSED(data);
-    AML_MP_UNUSED(size);
-
-    int ret = 0;
-    return ret;
-}
-
 int AmlNagraWebCas::decrypt(uint8_t *in, int size, void *ext_data, Aml_MP_Buffer* outbuffer)
 {
     outbuffer->address = pIptvCas->getOutbuffer();

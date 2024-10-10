@@ -15,7 +15,6 @@
 #include <Aml_MP/Common.h>
 #include <utils/AmlMpRefBase.h>
 
-
 namespace aml_mp {
 
 typedef enum
@@ -74,6 +73,9 @@ public:
     AmCasCode_t releaseAmCas();
     uint8_t* getOutbuffer();
     //CasStreamInfo mCasStreamInfo;
+    AmCasCode_t getChipID(char* chipid);
+    const char* getCAVersion();
+    AmCasCode_t setCasEventCallback(Aml_MP_CAS_EventCallback callback, void* pUserData);
 
 private:
     char mName[64];
@@ -96,6 +98,10 @@ private:
     typedef uint8_t* (*getOutbufferFunc)(void *casObj);
     typedef AmCasStatus_t (*selectTrackFunc)(void *casObj, int trackType, int trackPid, int trackFormat);
     typedef AmCasStatus_t (*releaseAmCasFunc)(void *casObj);
+    typedef AmCasStatus_t (*getChipIDFunc)(char* chipid);
+    typedef const char* (*getCAVersionFunc)(void *casObj);
+    typedef int (*FCAS_EventFunction_t)(void *pUserData, char *json);
+    typedef AmCasStatus_t (*setCasEventCallbackFunc)(FCAS_EventFunction_t eventFn, void* pUserData);
 
     struct CasSymbols
     {
@@ -114,6 +120,9 @@ private:
         getOutbufferFunc getOutbuffer;
         selectTrackFunc selectTrack;
         releaseAmCasFunc releaseAmCas;
+        getChipIDFunc getChipID;
+        getCAVersionFunc getCAVersion;
+        setCasEventCallbackFunc setCasEventCallback;
     };
     static CasSymbols sCasSymbols;
     static void* sCasHandle;
