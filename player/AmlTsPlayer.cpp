@@ -1066,7 +1066,7 @@ int AmlTsPlayer::startVideoDecoding() {
 
     ret = AmTsPlayer_startVideoDecoding(mPlayer);
 
-    if (ret != AM_TSPLAYER_OK) {
+    if (ret != AM_TSPLAYER_OK && ret != AM_TSPLAYER_ERROR_BUSY) {
         return -1;
     }
     return 0;
@@ -1077,7 +1077,7 @@ int AmlTsPlayer::stopVideoDecoding() {
 
     ret = AmTsPlayer_stopVideoDecoding(mPlayer);
 
-    if (ret != AM_TSPLAYER_OK) {
+    if (ret != AM_TSPLAYER_OK && ret != AM_TSPLAYER_ERROR_BUSY) {
         return -1;
     }
     return 0;
@@ -1114,7 +1114,7 @@ int AmlTsPlayer::startAudioDecoding() {
         mAudioEsDataFeedThread = new AudioEsDataFeedThread(this);
         mAudioEsDataFeedThread->start();
     }
-    if (ret != AM_TSPLAYER_OK) {
+    if (ret != AM_TSPLAYER_OK && ret != AM_TSPLAYER_ERROR_BUSY) {
         return -1;
     }
     return 0;
@@ -1130,7 +1130,7 @@ int AmlTsPlayer::stopAudioDecoding() {
 
     ret = AmTsPlayer_stopAudioDecoding(mPlayer);
 
-    if (ret != AM_TSPLAYER_OK) {
+    if (ret != AM_TSPLAYER_OK && ret != AM_TSPLAYER_ERROR_BUSY) {
         return -1;
     }
     return 0;
@@ -1142,7 +1142,7 @@ int AmlTsPlayer::startADDecoding()
 
     ret = AmTsPlayer_startAudioDecoding(mPlayer);
 
-    if (ret != AM_TSPLAYER_OK) {
+    if (ret != AM_TSPLAYER_OK && ret != AM_TSPLAYER_ERROR_BUSY) {
         return -1;
     }
     return 0;
@@ -1154,7 +1154,7 @@ int AmlTsPlayer::stopADDecoding()
 
     ret = AmTsPlayer_stopAudioDecoding(mPlayer);
 
-    if (ret != AM_TSPLAYER_OK) {
+    if (ret != AM_TSPLAYER_OK && ret != AM_TSPLAYER_ERROR_BUSY) {
         return -1;
     }
     return 0;
