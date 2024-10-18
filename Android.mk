@@ -274,6 +274,9 @@ AML_MP_SYSTEM_SHARED_LIBS_29 := \
 
 AML_MP_SYSTEM_SHARED_LIBS_ge_30 := \
 	libmediahal_tsplayer.system \
+	libmediahal_videodec.system \
+	libmediahal_mediasync.system \
+	libmediahal_resman.system \
 	libSubtitleClient \
 	libgui \
 	libamgralloc_ext \
