@@ -70,6 +70,8 @@ const char* mpCodecId2Str(Aml_MP_CodecID codecId)
         ENUM_TO_STR(AML_MP_VIDEO_CODEC_AV1);
         ENUM_TO_STR(AML_MP_VIDEO_CODEC_DVES_AVC);
         ENUM_TO_STR(AML_MP_VIDEO_CODEC_DVES_HEVC);
+        ENUM_TO_STR(AML_MP_VIDEO_CODEC_VVC);
+        ENUM_TO_STR(AML_MP_VIDEO_CODEC_AVS3);
         ENUM_TO_STR(AML_MP_VIDEO_CODEC_MAX);
 
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_BASE);
@@ -500,6 +502,10 @@ am_tsplayer_video_codec convertToVideoCodec(Aml_MP_CodecID aml_MP_VideoCodec) {
             return AV_VIDEO_CODEC_DVES_AVC;
         case AML_MP_VIDEO_CODEC_DVES_HEVC:
             return AV_VIDEO_CODEC_DVES_HEVC;
+        case AML_MP_VIDEO_CODEC_VVC:
+            return AV_VIDEO_CODEC_H266;
+        case AML_MP_VIDEO_CODEC_AVS3:
+            return AV_VIDEO_CODEC_AVS3;
         default:
             return AV_VIDEO_CODEC_AUTO;
     }
@@ -644,6 +650,25 @@ Aml_MP_CodecID convertToMpCodecId(DVR_VideoFormat_t fmt)
         codecId = AML_MP_VIDEO_CODEC_VP9;
         break;
 
+//libdvr_release doesn't contain the following type definitions
+#if !defined (ANDROID) || ANDROID_PLATFORM_SDK_VERSION >= 30
+    case DVR_VIDEO_FORMAT_DVES_AVC:
+        codecId = AML_MP_VIDEO_CODEC_DVES_AVC;
+        break;
+
+    case DVR_VIDEO_FORMAT_DVES_HEVC:
+        codecId = AML_MP_VIDEO_CODEC_DVES_HEVC;
+        break;
+
+    case DVR_VIDEO_FORMAT_H266:
+        codecId = AML_MP_VIDEO_CODEC_VVC;
+        break;
+
+    case DVR_VIDEO_FORMAT_AVS3:
+        codecId = AML_MP_VIDEO_CODEC_AVS3;
+        break;
+#endif
+
     default:
         MLOGW("unknown video codec:%d", fmt);
         break;
@@ -715,6 +740,10 @@ DVR_VideoFormat_t convertToDVRVideoFormat(Aml_MP_CodecID codecId)
             return DVR_VIDEO_FORMAT_DVES_AVC;
         case AML_MP_VIDEO_CODEC_DVES_HEVC:
             return DVR_VIDEO_FORMAT_DVES_HEVC;
+        case AML_MP_VIDEO_CODEC_VVC:
+            return DVR_VIDEO_FORMAT_H266;
+        case AML_MP_VIDEO_CODEC_AVS3:
+            return DVR_VIDEO_FORMAT_AVS3;
 #endif
         default:
             MLOGE("unknown video codecId:%d", codecId);
@@ -1437,6 +1466,8 @@ const char codecMap[][20][30] = {
         "video/av01",           //AML_MP_VIDEO_CODEC_AV1
         "video/dves-avc",       //AML_MP_VIDEO_CODEC_DVES_AVC
         "video/dves-hevc",      //AML_MP_VIDEO_CODEC_DVES_HEVC
+        "video/vvc",            //AML_MP_VIDEO_CODEC_VVC
+        "video/avs3",           //AML_MP_VIDEO_CODEC_AVS3
     },
     //Audio codec
     {
