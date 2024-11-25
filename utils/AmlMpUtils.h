@@ -185,6 +185,7 @@ Aml_MP_CodecID convertToMpCodecId(DVR_VideoFormat_t fmt);
 Aml_MP_CodecID convertToMpCodecId(DVR_AudioFormat_t fmt);
 DVR_VideoFormat_t convertToDVRVideoFormat(Aml_MP_CodecID codecId);
 DVR_AudioFormat_t convertToDVRAudioFormat(Aml_MP_CodecID codecId);
+Aml_MP_CodecID convertToMpCodecId(am_tsplayer_audio_codec audioCodec);
 
 void convertToMpDVRStream(Aml_MP_DVRStream* mpDvrStream, DVR_StreamPid_t* dvrStream);
 void convertToMpDVRStream(Aml_MP_DVRStream* mpDvrStream, DVR_StreamInfo_t* dvrStreamInfo);
@@ -196,6 +197,9 @@ am_tsplayer_audio_out_mode convertToTsPlayerAudioOutMode(Aml_MP_AudioOutputMode 
 void convertToMpVideoInfo(Aml_MP_VideoInfo* mpVideoInfo, am_tsplayer_video_info* tsVideoInfo);
 am_tsplayer_audio_stereo_mode convertToTsPlayerAudioStereoMode(Aml_MP_AudioBalance audioBalance);
 void convertToMpPlayerEventAudioFormat(Aml_MP_PlayerEventAudioFormat* dest, am_tsplayer_audio_format_t* source);
+#ifdef ANDROID
+void convertToMpPlayerEventAudioFormat(Aml_MP_PlayerEventAudioFormat* dest, am_tsplayer_audio_decinfo_t* source);
+#endif
 
 DVB_DemuxSource_t convertToDVBDemuxSource(Aml_MP_DemuxSource source);
 Aml_MP_DemuxSource convertToMpDemuxSource(DVB_DemuxSource_t source);

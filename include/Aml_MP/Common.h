@@ -201,6 +201,8 @@ typedef enum {
     AML_MP_AUDIO_CODEC_VORBIS,             // VORBIS
     AML_MP_AUDIO_CODEC_OPUS,               // OPUS
     AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV,  // ADPCM
+    AML_MP_AUDIO_CODEC_HEAAC_V1,           // HEAAC V1
+    AML_MP_AUDIO_CODEC_HEAAC_V2,           // HEAAC V2
     AML_MP_AUDIO_CODEC_MAX,
 
     AML_MP_SUBTITLE_CODEC_BASE = 2000,
@@ -880,7 +882,8 @@ typedef struct {
     uint32_t sample_rate;
     uint32_t channels;
     uint32_t channel_mask;
-    long     reserved[8];
+    Aml_MP_CodecID audio_codec __AML_MP_RESERVE_ALIGNED;
+    long     reserved[7];
 } Aml_MP_PlayerEventAudioFormat;
 
 //AML_MP_PLAYER_EVENT_SCRAMBLING,

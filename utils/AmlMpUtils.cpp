@@ -86,6 +86,8 @@ const char* mpCodecId2Str(Aml_MP_CodecID codecId)
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_VORBIS);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_OPUS);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV);
+        ENUM_TO_STR(AML_MP_AUDIO_CODEC_HEAAC_V1);
+        ENUM_TO_STR(AML_MP_AUDIO_CODEC_HEAAC_V2);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_MAX);
 
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_BASE);
@@ -529,10 +531,13 @@ am_tsplayer_audio_codec convertToAudioCodec(Aml_MP_CodecID aml_MP_AudioCodec) {
             return AV_AUDIO_CODEC_VORBIS;
         case AML_MP_AUDIO_CODEC_OPUS:
             return AV_AUDIO_CODEC_OPUS;
-#ifndef ANDROID
-        // Android media_hal not define follow enum, for Linux version only
         case AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV:
             return AV_AUDIO_CODEC_PCM_ADPCM_IMA_WAV;
+#ifdef ANDROID
+        case AML_MP_AUDIO_CODEC_HEAAC_V1:
+            return AV_AUDIO_CODEC_HE_AAC_V1;
+        case AML_MP_AUDIO_CODEC_HEAAC_V2:
+            return AV_AUDIO_CODEC_HE_AAC_V2;
 #endif
 
         default:
@@ -686,7 +691,7 @@ Aml_MP_CodecID convertToMpCodecId(DVR_AudioFormat_t fmt)
         break;
 
     default:
-        MLOGW("unknown audio codec:%d", fmt);
+        MLOG("unknown audio codec:%d", fmt);
         break;
     }
 
@@ -737,10 +742,88 @@ DVR_AudioFormat_t convertToDVRAudioFormat(Aml_MP_CodecID codecId)
             return DVR_AUDIO_FORMAT_PCM;
         case AML_MP_AUDIO_CODEC_AC4:
             return DVR_AUDIO_FORMAT_AC4;
+        case AML_MP_AUDIO_CODEC_HEAAC_V1:
+        case AML_MP_AUDIO_CODEC_HEAAC_V2:
+            return DVR_AUDIO_FORMAT_HEAAC;
         default:
             MLOGE("unknown audio codecId:%d", codecId);
             return DVR_AUDIO_FORMAT_MPEG;
     }
+}
+
+Aml_MP_CodecID convertToMpCodecId(am_tsplayer_audio_codec audioCodec)
+{
+    Aml_MP_CodecID codecId = AML_MP_CODEC_UNKNOWN;
+
+    switch (audioCodec) {
+    case AV_AUDIO_CODEC_MP2:
+        codecId = AML_MP_AUDIO_CODEC_MP2;
+        break;
+
+    case AV_AUDIO_CODEC_MP3:
+        codecId = AML_MP_AUDIO_CODEC_MP3;
+        break;
+
+    case AV_AUDIO_CODEC_AC3:
+        codecId = AML_MP_AUDIO_CODEC_AC3;
+        break;
+
+    case AV_AUDIO_CODEC_EAC3:
+        codecId = AML_MP_AUDIO_CODEC_EAC3;
+        break;
+
+    case AV_AUDIO_CODEC_DTS:
+        codecId = AML_MP_AUDIO_CODEC_DTS;
+        break;
+
+    case AV_AUDIO_CODEC_AAC:
+        codecId = AML_MP_AUDIO_CODEC_AAC;
+        break;
+
+    case AV_AUDIO_CODEC_LATM:
+        codecId = AML_MP_AUDIO_CODEC_LATM;
+        break;
+
+    case AV_AUDIO_CODEC_PCM:
+        codecId = AML_MP_AUDIO_CODEC_PCM;
+        break;
+
+    case AV_AUDIO_CODEC_AC4:
+        codecId = AML_MP_AUDIO_CODEC_AC4;
+        break;
+
+    case AV_AUDIO_CODEC_FLAC:
+        codecId = AML_MP_AUDIO_CODEC_FLAC;
+        break;
+
+    case AV_AUDIO_CODEC_VORBIS:
+        codecId = AML_MP_AUDIO_CODEC_VORBIS;
+        break;
+
+    case AV_AUDIO_CODEC_OPUS:
+        codecId = AML_MP_AUDIO_CODEC_OPUS;
+        break;
+
+    case AV_AUDIO_CODEC_PCM_ADPCM_IMA_WAV:
+        codecId = AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV;
+        break;
+
+#ifdef ANDROID
+    case AV_AUDIO_CODEC_HE_AAC_V1:
+        codecId = AML_MP_AUDIO_CODEC_HEAAC_V1;
+        break;
+
+    case AV_AUDIO_CODEC_HE_AAC_V2:
+        codecId = AML_MP_AUDIO_CODEC_HEAAC_V2;
+        break;
+#endif
+
+    default:
+        MLOG("unknown audio codec:%d", audioCodec);
+        break;
+    }
+
+    return codecId;
 }
 
 void convertToMpDVRStream(Aml_MP_DVRStream* mpDvrStream, DVR_StreamPid_t* dvrStream)
@@ -903,13 +986,29 @@ am_tsplayer_audio_stereo_mode convertToTsPlayerAudioStereoMode(Aml_MP_AudioBalan
     return AV_AUDIO_STEREO;
 }
 
-void convertToMpPlayerEventAudioFormat(Aml_MP_PlayerEventAudioFormat* dest, am_tsplayer_audio_format_t* source) {
+void convertToMpPlayerEventAudioFormat(Aml_MP_PlayerEventAudioFormat* dest, am_tsplayer_audio_format_t* source)
+{
+    memset(dest, 0, sizeof(*dest));
+    dest->audio_codec = AML_MP_CODEC_UNKNOWN;
+
     dest->sample_rate = source->sample_rate;
     dest->channels = source->channels;
 #ifdef ANDROID //yocto mediahal hasn't define channel_mask.
     dest->channel_mask = source->channel_mask;
 #endif
 }
+
+#ifdef ANDROID
+void convertToMpPlayerEventAudioFormat(Aml_MP_PlayerEventAudioFormat* dest, am_tsplayer_audio_decinfo_t* source)
+{
+    memset(dest, 0, sizeof(*dest));
+
+    dest->audio_codec = convertToMpCodecId((am_tsplayer_audio_codec)source->format);
+    dest->sample_rate = source->sample_rate;
+    dest->channels = source->channels;
+    dest->channel_mask = source->channel_mask;
+}
+#endif
 
 static struct DemuxSourceConvertMap {
     DVB_DemuxSource_t dvbDemuxSource;
@@ -1354,7 +1453,9 @@ const char codecMap[][20][30] = {
         "audio/flac",       //AML_MP_AUDIO_CODEC_FLAC
         "audio/vorbis",     //AML_MP_AUDIO_CODEC_VORBIS
         "audio/opus",       //AML_MP_AUDIO_CODEC_OPUS
-        "audio/adpcm",       //AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV
+        "audio/adpcm",      //AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV
+        "audio/heaac_v1",   //AML_MP_AUDIO_CODEC_HEAAC_V1
+        "audio/heaac_v2",   //AML_MP_AUDIO_CODEC_HEAAC_V2
     },
 };
 

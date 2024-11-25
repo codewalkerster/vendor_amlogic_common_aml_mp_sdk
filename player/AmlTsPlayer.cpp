@@ -1432,6 +1432,24 @@ void AmlTsPlayer::eventCallback(am_tsplayer_event* event)
     break;
 #endif
 
+#ifdef ANDROID
+    case AM_TSPLAYER_EVENT_TYPE_AUDIO_FORMAT_CHANGED:
+    {
+        am_tsplayer_audio_decinfo_t decInfo{};
+        if (sizeof(decInfo) != event->event.data.size) {
+            MLOGW("AUDIO_FORMAT_CHANGED event data size mismatch %zu vs %u", sizeof(decInfo), event->event.data.size);
+        }
+        memcpy(&decInfo, event->event.data.data, sizeof(decInfo));
+
+        Aml_MP_PlayerEventAudioFormat audioFormatEvent;
+        convertToMpPlayerEventAudioFormat(&audioFormatEvent, &decInfo);
+        MLOGI("notify AUDIO_FORMAT_CHANGED, tsplayer audio_codec:%d, mp audio_codec:%d(%s)",
+               decInfo.format, audioFormatEvent.audio_codec, mpCodecId2Str(audioFormatEvent.audio_codec));
+        notifyListener(AML_MP_PLAYER_EVENT_AUDIO_CHANGED, (int64_t)&audioFormatEvent);
+    }
+    break;
+#endif
+
     default:
         MLOGE("unhandled event:%d", event->type);
         break;
