@@ -183,6 +183,7 @@ const char* mpPlayerParameterKey2Str(Aml_MP_PlayerParameterKey playerParamKey) {
         ENUM_TO_STR(AML_MP_PLAYER_PARAMETER_VIDEO_SHOW_STATE);
         ENUM_TO_STR(AML_MP_PLAYER_PARAMETER_AV_INFO_JSON);
         ENUM_TO_STR(AML_MP_PLAYER_PARAMETER_TSPLAYER_HANDLE);
+        ENUM_TO_STR(AML_MP_PLAYER_PARAMETER_AV_STAT_JSON);
         default:
             return "unknown player parameter key";
     }

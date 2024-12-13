@@ -12,6 +12,7 @@
 #include "AmlTsPlayer.h"
 #include <AmTsPlayer.h>
 #include <utils/AmlMpUtils.h>
+#include <utils/json/json.h>
 #ifdef ANDROID
 #include <system/window.h>
 #include <amlogic/am_gralloc_ext.h>
@@ -1016,6 +1017,48 @@ int AmlTsPlayer::getParameter(Aml_MP_PlayerParameterKey key, void* parameter) {
         case AML_MP_PLAYER_PARAMETER_AUDIO_PRESENTATION_ID:
         {
             ret = AmTsPlayer_getParams(mPlayer, AM_TSPLAYER_KEY_AUDIO_PRESENTATION_ID, parameter);
+            break;
+        }
+
+        case AML_MP_PLAYER_PARAMETER_AV_STAT_JSON:
+        {
+            Aml_MP_AvStat* avStat = (Aml_MP_AvStat*)parameter;
+            bool hasVideoStat = avStat->streamTypeMask & AML_MP_STREAM_TYPE_MASK_VIDEO;
+            bool hasAudioStat = avStat->streamTypeMask & AML_MP_STREAM_TYPE_MASK_AUDIO;
+            am_tsplayer_drop_frame_info dropDrameInfo;
+
+            if (avStat->streamTypeMask & AML_MP_STREAM_TYPE_MASK_VIDEO) {
+                ret = AmTsPlayer_getParams(mPlayer, AM_TSPLAYER_KEY_GET_VIDEO_DROP_FRAME_INFO, &dropDrameInfo);
+                //MLOGI("AML_MP_PLAYER_PARAMETER_AV_STAT_JSON ret %d  dropDrameInfo.theory_drop_frame_cnt %d", ret, dropDrameInfo->theory_drop_frame_cnt);
+                if (ret != AM_TSPLAYER_OK) {
+                    hasVideoStat = false;
+                }
+            }
+
+            Json::Value tmpJson;
+            Json::Value tmpJsonArray;
+            std::string tmpString;
+            Json::StreamWriterBuilder builder;
+
+            //video stat
+            tmpJson.clear();
+            if (hasVideoStat) {
+                tmpJson["videoDropFrameCount"] = dropDrameInfo.theory_drop_frame_cnt;
+            }
+            tmpJsonArray.append(tmpJson);
+
+            //audio stat
+            tmpJson.clear();
+            tmpJsonArray.append(tmpJson);
+
+            tmpString = Json::writeString(builder, tmpJsonArray);
+            if (avStat->dataLength < tmpString.length() + 1) {
+                avStat->actualLength = 0;
+                MLOGE("Buffer is too small, required: %zu, available: %zu", tmpString.length() + 1, avStat->dataLength);
+                return AML_MP_ERROR;
+            }
+            strncpy((char *)avStat->data, tmpString.c_str(), tmpString.length() + 1);
+            avStat->actualLength = tmpString.length() + 1;
             break;
         }
 

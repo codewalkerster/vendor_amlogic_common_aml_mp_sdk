@@ -373,6 +373,8 @@ typedef struct {
     uint32_t streamTypeMask;  // value from Aml_MP_StreamTypeMask
 } Aml_MP_AvInfo;
 
+typedef Aml_MP_AvInfo Aml_MP_AvStat;
+
 typedef enum  {
     AML_MP_DECODING_STATE_STOPPED           = 0,
     AML_MP_DECODING_STATE_START_PENDING     = 1,
@@ -448,6 +450,7 @@ typedef enum {
     AML_MP_PLAYER_PARAMETER_VIDEO_SHOW_STATE,               //getVideoShowState(bool*)
     AML_MP_PLAYER_PARAMETER_AV_INFO_JSON,                   //getAVInfo(Aml_MP_AvInfo*)
     AML_MP_PLAYER_PARAMETER_TSPLAYER_HANDLE,                //getTsPlayerHandle(am_tsplayer_handle*)
+    AML_MP_PLAYER_PARAMETER_AV_STAT_JSON,                   //getAVStat(Aml_MP_AvStat*)
 } Aml_MP_PlayerParameterKey;
 
 ////////////////////////////////////////

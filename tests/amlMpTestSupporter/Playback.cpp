@@ -16,6 +16,7 @@
 #include <vector>
 #include <string>
 #include <fcntl.h>
+#include <utils/json/json.h>
 
 static const char* mName = LOG_TAG;
 
@@ -1351,14 +1352,65 @@ static struct TestModule::Command g_commandTable[] = {
             ret = Aml_MP_Player_GetParameter(player, AML_MP_PLAYER_PARAMETER_SYNC_ID, &syncId);
             printf("AML_MP_PLAYER_PARAMETER_SYNC_ID get sync id: %d\n", syncId);
 
-            Aml_MP_AvInfo avState;
-            avState.dataLength = 1024;
-            avState.streamTypeMask = AML_MP_STREAM_TYPE_MASK_VIDEO | AML_MP_STREAM_TYPE_MASK_AUDIO;
-            avState.data = (uint8_t *)malloc(avState.dataLength);
-            ret = Aml_MP_Player_GetParameter(player, AML_MP_PLAYER_PARAMETER_AV_INFO_JSON, &avState);
-            printf("AML_MP_PLAYER_PARAMETER_AV_INFO_JSON, json[%zu]:\n%s\n", avState.actualLength, avState.data);
-            free(avState.data);
-            avState.data = NULL;
+            Aml_MP_AvInfo avInfo;
+            avInfo.dataLength = 1024;
+            avInfo.streamTypeMask = AML_MP_STREAM_TYPE_MASK_VIDEO | AML_MP_STREAM_TYPE_MASK_AUDIO;
+            avInfo.data = (uint8_t *)malloc(avInfo.dataLength);
+            ret = Aml_MP_Player_GetParameter(player, AML_MP_PLAYER_PARAMETER_AV_INFO_JSON, &avInfo);
+            printf("AML_MP_PLAYER_PARAMETER_AV_INFO_JSON, json[%zu]:\n%s\n", avInfo.actualLength, avInfo.data);
+            free(avInfo.data);
+            avInfo.data = NULL;
+
+            Aml_MP_AvStat avStat;
+            avStat.dataLength = 1024;
+            avStat.streamTypeMask = AML_MP_STREAM_TYPE_MASK_VIDEO | AML_MP_STREAM_TYPE_MASK_AUDIO;
+            avStat.data = (uint8_t *)malloc(avStat.dataLength);
+            ret = Aml_MP_Player_GetParameter(player, AML_MP_PLAYER_PARAMETER_AV_STAT_JSON, &avStat);
+            if (ret != AML_MP_OK) {
+                free(avStat.data);
+                avStat.data = NULL;
+                return ret;
+            }
+
+            printf("AML_MP_PLAYER_PARAMETER_AV_STAT_JSON, json[%zu]:\n%s\n", avStat.actualLength, avStat.data);
+
+            Json::Value root;
+            Json::CharReaderBuilder  builder;
+            std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+            std::string errors;
+            std::string jsonString(reinterpret_cast<const char*>(avStat.data), avStat.actualLength);
+
+            free(avStat.data);
+            avStat.data = NULL;
+
+            // parse JSON
+            if (!reader->parse(jsonString.c_str(), jsonString.c_str() + jsonString.size(), &root, &errors)) {
+                printf("Parsed JSON failed! error:%s\n", errors.c_str());
+                return -1;
+            }
+
+            if (!root.isArray()) {
+                return -1;
+            }
+
+            if (avStat.streamTypeMask & AML_MP_STREAM_TYPE_MASK_VIDEO) {
+                const Json::Value& item = root[0];
+
+                printf("video stat:\n");
+                for (const auto& key : item.getMemberNames()) {
+                    printf("    %s:%s\n", key.c_str(), item[key].toStyledString().c_str());
+                }
+            }
+
+            if (avStat.streamTypeMask & AML_MP_STREAM_TYPE_MASK_AUDIO) {
+                const Json::Value& item = root[1];
+
+                printf("audio stat:\n");
+                for (const auto& key : item.getMemberNames()) {
+                    printf("    %s:%s\n", key.c_str(), item[key].toStyledString().c_str());
+                }
+            }
+
             return ret;
         }
     },
