@@ -90,6 +90,7 @@ const char* mpCodecId2Str(Aml_MP_CodecID codecId)
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_HEAAC_V1);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_HEAAC_V2);
+        ENUM_TO_STR(AML_MP_AUDIO_CODEC_MPEGH);
         ENUM_TO_STR(AML_MP_AUDIO_CODEC_MAX);
 
         ENUM_TO_STR(AML_MP_SUBTITLE_CODEC_BASE);
@@ -546,6 +547,8 @@ am_tsplayer_audio_codec convertToAudioCodec(Aml_MP_CodecID aml_MP_AudioCodec) {
         case AML_MP_AUDIO_CODEC_HEAAC_V2:
             return AV_AUDIO_CODEC_HE_AAC_V2;
 #endif
+        case AML_MP_AUDIO_CODEC_MPEGH:
+            return AV_AUDIO_CODEC_MPEGH;
 
         default:
             return AV_AUDIO_CODEC_AUTO;
@@ -716,6 +719,13 @@ Aml_MP_CodecID convertToMpCodecId(DVR_AudioFormat_t fmt)
         codecId = AML_MP_AUDIO_CODEC_AC4;
         break;
 
+//libdvr_release doesn't contain the following type definitions
+#if !defined (ANDROID) || ANDROID_PLATFORM_SDK_VERSION >= 30
+    case DVR_AUDIO_FORMAT_MPEGH:
+        codecId = AML_MP_AUDIO_CODEC_MPEGH;
+#endif
+        break;
+
     default:
         MLOG("unknown audio codec:%d", fmt);
         break;
@@ -775,6 +785,11 @@ DVR_AudioFormat_t convertToDVRAudioFormat(Aml_MP_CodecID codecId)
         case AML_MP_AUDIO_CODEC_HEAAC_V1:
         case AML_MP_AUDIO_CODEC_HEAAC_V2:
             return DVR_AUDIO_FORMAT_HEAAC;
+//libdvr_release doesn't contain the following type definitions
+#if !defined (ANDROID) || ANDROID_PLATFORM_SDK_VERSION >= 30
+        case AML_MP_AUDIO_CODEC_MPEGH:
+            return DVR_AUDIO_FORMAT_MPEGH;
+#endif
         default:
             MLOGE("unknown audio codecId:%d", codecId);
             return DVR_AUDIO_FORMAT_MPEG;
@@ -847,6 +862,10 @@ Aml_MP_CodecID convertToMpCodecId(am_tsplayer_audio_codec audioCodec)
         codecId = AML_MP_AUDIO_CODEC_HEAAC_V2;
         break;
 #endif
+
+    case AV_AUDIO_CODEC_MPEGH:
+        codecId = AML_MP_AUDIO_CODEC_MPEGH;
+        break;
 
     default:
         MLOG("unknown audio codec:%d", audioCodec);
@@ -1488,6 +1507,7 @@ const char codecMap[][20][30] = {
         "audio/adpcm",      //AML_MP_AUDIO_CODEC_PCM_ADPCM_IMA_WAV
         "audio/heaac_v1",   //AML_MP_AUDIO_CODEC_HEAAC_V1
         "audio/heaac_v2",   //AML_MP_AUDIO_CODEC_HEAAC_V2
+        "audio/mpegh",      //AML_MP_AUDIO_CODEC_MPEGH
     },
 };
 
